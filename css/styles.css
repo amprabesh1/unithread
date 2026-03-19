@@ -26,16 +26,54 @@
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-color: #F0F2F5; }
+.dark body, body.dark { background-color: #18191A; }
 
-/* Nav active: white tint bg + white text on Reflex Blue sidebar */
-.nav-link.nav-active {
-  background-color: rgba(255,255,255,0.18) !important;
-  color: #ffffff !important;
-  border-left: 3px solid rgba(255,255,255,0.9);
-  font-weight: 600;
+/* Top nav tabs — Facebook-style centered icon buttons */
+.topnav-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 0 1.5rem;
+  height: 100%;
+  color: #737373;
+  border-bottom: 3px solid transparent;
+  border-top: 3px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
-.sidebar-desktop .nav-link.nav-active { border-radius: 0 12px 12px 0; margin-left: 0; padding-left: calc(0.75rem - 3px); }
+.topnav-tab:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #001489;
+  border-radius: 0;
+}
+.topnav-tab.nav-active {
+  color: #001489 !important;
+  border-bottom-color: #001489 !important;
+  border-left: none !important;
+  background-color: transparent !important;
+  font-weight: 600;
+  border-radius: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 1.5rem !important;
+}
+.dark .topnav-tab { color: #737373; }
+.dark .topnav-tab:hover { background-color: rgba(255,255,255,0.06); color: #e5e5e5; }
+.dark .topnav-tab.nav-active { color: #ffffff !important; border-bottom-color: #ffffff !important; }
+
+/* Sidebar nav active — blue bg + blue text */
+.sidebar-link.nav-active {
+  background-color: #EEF2FF !important;
+  color: #001489 !important;
+  font-weight: 600;
+  border-left: none !important;
+}
+.dark .sidebar-link.nav-active {
+  background-color: rgba(0, 20, 137, 0.25) !important;
+  color: #a5b4fc !important;
+}
+
+/* Bottom nav active */
 .bottom-nav a.nav-active {
   color: var(--reflex-blue) !important;
   border-left: none;
