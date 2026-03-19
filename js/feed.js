@@ -243,14 +243,14 @@
 
     container.setAttribute('data-feed-filter', filter);
     container.innerHTML = `
-      <div class="mb-6 fade-in-up delay-0">
-        <h2 class="text-xl font-bold text-neutral-800 dark:text-white mb-4">Feed</h2>
+      <div class="mb-4 fade-in-up delay-0">
+        <h2 class="text-xl font-bold text-neutral-800 dark:text-white mb-3">Feed</h2>
         <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'all' ? 'active' : ''}" data-filter="all">All (${countAll})</button>
+          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'post' ? 'active' : ''}" data-filter="post">Posts (${countPosts})</button>
           <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'ride' ? 'active' : ''}" data-filter="ride">Rides (${countRides})</button>
           <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'task' ? 'active' : ''}" data-filter="task">Tasks (${countTasks})</button>
           <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'maintenance' ? 'active' : ''}" data-filter="maintenance">Maintenance (${countMaint})</button>
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'post' ? 'active' : ''}" data-filter="post">Posts (${countPosts})</button>
+          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'all' ? 'active' : ''}" data-filter="all">All (${countAll})</button>
         </div>
       </div>
       <div class="space-y-4" id="feed-cards">
