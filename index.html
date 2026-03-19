@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniThread – Campus Community</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            neutral: { 50: '#fafafa', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#d4d4d4', 400: '#a3a3a3', 500: '#737373', 600: '#525252', 700: '#404040', 800: '#262626', 900: '#171717' },
+            accent: { green: '#22c55e', coral: '#f43f5e', blue: '#3b82f6' },
+            reflex: { blue: '#001489' },
+            sidebar: { border: 'rgba(255,255,255,0.12)', hover: 'rgba(255,255,255,0.10)', activeBg: 'rgba(255,255,255,0.18)', activeText: '#ffffff' },
+            type: { rideBg: '#E3F0FF', rideText: '#2A85FF', taskBg: '#FFF3E8', taskText: '#FF8C00', maintenanceBg: '#FFE8E4', maintenanceText: '#FF6A55', postBg: '#F3E8FF', postText: '#7C3AED' }
+          },
+          borderRadius: { 'card': '12px', 'xl': '12px' },
+          boxShadow: {
+            card: '0 1px 3px rgba(0,0,0,0.06)',
+            'card-hover': '0 4px 12px rgba(0,0,0,0.08)',
+            topbar: '0 1px 3px rgba(0,0,0,0.05)'
+          }
+        }
+      }
+    };
+  </script>
+  <link href="css/styles.css" rel="stylesheet" />
+</head>
+<body id="app-body" class="bg-[#F0F2F5] dark:bg-[#18191A] min-h-screen text-neutral-800 dark:text-neutral-200 font-sans antialiased transition-colors duration-200">
+  <div id="app-shell" class="hidden">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-30 h-14 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 flex items-center transition-colors duration-200" style="box-shadow:0 1px 6px rgba(0,0,0,0.07);">
+      <!-- Left: Logo + Search -->
+      <div class="flex items-center gap-2 pl-3 pr-2 flex-shrink-0 w-[260px]">
+        <a href="#feed" id="logo-home-link" class="hidden md:flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity">
+          <span class="w-9 h-9 rounded-xl bg-[#001489] flex items-center justify-center text-[11px] font-extrabold text-white flex-shrink-0">UT</span>
+        </a>
+        <a href="#feed" id="logo-home-link-mobile" class="flex items-center gap-2 hover:opacity-80 transition-opacity md:hidden">
+          <span class="w-8 h-8 rounded-xl bg-[#001489] flex items-center justify-center text-[10px] font-extrabold text-white">UT</span>
+          <span class="text-base font-bold text-[#001489] dark:text-white tracking-tight">UniThread</span>
+        </a>
+        <div class="relative flex-1 min-w-0 hidden md:block">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none"></i>
+          <input type="search" id="top-search" placeholder="Search UniThread..." class="w-full pl-9 pr-3 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 border-0 text-sm text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-neutral-600 focus:bg-white dark:focus:bg-neutral-700 transition-all" />
+        </div>
+      </div>
+
+      <!-- Center: Nav icon tabs -->
+      <nav class="hidden md:flex flex-1 items-stretch justify-center h-full gap-1">
+        <a href="#feed" class="topnav-tab nav-link" data-page="feed" title="Feed">
+          <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
+        </a>
+        <a href="#create" class="topnav-tab nav-link" data-page="create" title="Create Post">
+          <i data-lucide="pen-square" class="w-6 h-6"></i>
+        </a>
+        <a href="#messages" class="topnav-tab nav-link" data-page="messages" title="Messages">
+          <i data-lucide="message-circle" class="w-6 h-6"></i>
+        </a>
+        <a href="#groups" class="topnav-tab nav-link" data-page="groups" title="Groups">
+          <i data-lucide="users" class="w-6 h-6"></i>
+        </a>
+        <a href="#activity" class="topnav-tab nav-link" data-page="activity" title="My Activity">
+          <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+        </a>
+      </nav>
+
+      <!-- Right: Actions -->
+      <div class="flex items-center gap-1 pr-3 flex-shrink-0 ml-auto md:ml-0">
+        <button type="button" id="theme-toggle" aria-label="Toggle dark mode" class="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors text-neutral-600 dark:text-neutral-300">
+          <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+          <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+        </button>
+        <button type="button" aria-label="Notifications" class="relative p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
+          <i data-lucide="bell" class="w-5 h-5 text-neutral-600 dark:text-neutral-300"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-neutral-900"></span>
+        </button>
+        <a href="#settings" class="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors text-neutral-600 dark:text-neutral-300 hidden md:flex">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </a>
+        <a href="#profile" id="header-avatar-link" class="ml-1">
+          <div id="header-avatar" class="w-9 h-9 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-sm font-semibold text-neutral-700 dark:text-neutral-200 ring-2 ring-transparent hover:ring-neutral-300 dark:hover:ring-neutral-500 transition-all"></div>
+        </a>
+      </div>
+    </header>
+
+    <!-- Left sidebar (desktop) -->
+    <aside class="sidebar-desktop fixed left-0 top-14 z-20 w-60 h-[calc(100vh-3.5rem)] flex flex-col bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transition-colors duration-200">
+      <!-- Nav links -->
+      <nav class="p-3 space-y-0.5 flex-1">
+        <a href="#feed" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="feed">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 flex-shrink-0"></i>
+          <span>Feed</span>
+        </a>
+        <a href="#create" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="create">
+          <i data-lucide="pen-square" class="w-5 h-5 flex-shrink-0"></i>
+          <span>Create Post</span>
+        </a>
+        <a href="#messages" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="messages">
+          <i data-lucide="message-circle" class="w-5 h-5 flex-shrink-0"></i>
+          <span>Messages</span>
+        </a>
+        <a href="#groups" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="groups">
+          <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
+          <span>Groups</span>
+        </a>
+        <a href="#activity" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="activity">
+          <i data-lucide="clipboard-list" class="w-5 h-5 flex-shrink-0"></i>
+          <span>My Activity</span>
+        </a>
+        <a href="#profile" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="profile">
+          <i data-lucide="user" class="w-5 h-5 flex-shrink-0"></i>
+          <span>Profile</span>
+        </a>
+        <a href="#settings" class="sidebar-link nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white transition-colors duration-150 text-[14px] font-medium" data-page="settings">
+          <i data-lucide="settings" class="w-5 h-5 flex-shrink-0"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+      <!-- Bottom: quick post + user -->
+      <div class="p-3 space-y-2 border-t border-neutral-200 dark:border-neutral-800">
+        <a href="#create" class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#001489] text-white text-sm font-semibold hover:bg-[#001489]/90 transition-colors duration-200">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Quick Post</span>
+        </a>
+        <div id="sidebar-user" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-default">
+          <div id="sidebar-avatar" class="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex-shrink-0"></div>
+          <div class="min-w-0 flex-1">
+            <p id="sidebar-name" class="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate">—</p>
+            <a href="#" id="sidebar-signout" class="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">Sign out</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main + Right panel wrapper -->
+    <div class="main-with-sidebar pt-14 md:pl-60 pb-20 md:pb-8 min-h-screen flex flex-col xl:flex-row xl:max-w-[1600px] xl:mx-auto">
+      <main class="flex-1 min-w-0 p-3 md:p-4 md:pt-4">
+        <div id="view-feed" data-view class="view-content feed-view"></div>
+        <div id="view-create" data-view class="view-content"></div>
+        <div id="view-messages" data-view class="view-content"></div>
+        <div id="view-groups" data-view class="view-content"></div>
+        <div id="view-activity" data-view class="view-content"></div>
+        <div id="view-profile" data-view class="view-content"></div>
+        <div id="view-settings" data-view class="view-content"></div>
+      </main>
+      <aside id="right-panel" class="right-panel hidden xl:block xl:w-[280px] xl:flex-shrink-0 xl:p-4 xl:pt-6"></aside>
+    </div>
+
+    <!-- Bottom nav (mobile) -->
+    <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 flex justify-around py-2 hidden safe-area-pb">
+      <a href="#feed" class="flex flex-col items-center gap-0.5 px-3 py-2 text-neutral-500 dark:text-neutral-400 hover:text-sidebar-activeText transition-colors duration-200" data-page="feed"><i data-lucide="layout-dashboard" class="w-6 h-6"></i><span class="text-[10px] font-medium">Feed</span></a>
+      <a href="#create" class="flex flex-col items-center gap-0.5 px-3 py-2 text-neutral-500 dark:text-neutral-400 hover:text-sidebar-activeText transition-colors duration-200" data-page="create"><i data-lucide="plus" class="w-6 h-6"></i><span class="text-[10px] font-medium">Post</span></a>
+      <a href="#messages" class="flex flex-col items-center gap-0.5 px-3 py-2 text-neutral-500 dark:text-neutral-400 hover:text-sidebar-activeText transition-colors duration-200" data-page="messages"><i data-lucide="message-circle" class="w-6 h-6"></i><span class="text-[10px] font-medium">Chat</span></a>
+      <a href="#groups" class="flex flex-col items-center gap-0.5 px-3 py-2 text-neutral-500 dark:text-neutral-400 hover:text-sidebar-activeText transition-colors duration-200" data-page="groups"><i data-lucide="users" class="w-6 h-6"></i><span class="text-[10px] font-medium">Groups</span></a>
+      <a href="#profile" class="flex flex-col items-center gap-0.5 px-3 py-2 text-neutral-500 dark:text-neutral-400 hover:text-sidebar-activeText transition-colors duration-200" data-page="profile"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] font-medium">Profile</span></a>
+    </nav>
+  </div>
+
+  <div id="auth-container" class="w-full h-screen p-0 bg-gradient-to-b from-[#050816] via-[#141137] to-[#050816] hidden overflow-hidden">
+    <div id="view-login" data-view class="w-full h-full"></div>
+    <div id="view-signup" data-view class="w-full h-full"></div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/feed.js"></script>
+  <script src="js/create-post.js"></script>
+  <script src="js/messages.js"></script>
+  <script src="js/groups.js"></script>
+  <script src="js/activity.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

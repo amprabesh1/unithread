@@ -1,0 +1,13 @@
+{
+  "name": "campthread",
+  "version": "1.0.0",
+  "description": "A campus community platform built with **HTML**, **Tailwind CSS**, and **vanilla JavaScript**. Multi-page experience (SPA with hash routing): Feed, Create Post, My Activity, Profile, and Settings.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
