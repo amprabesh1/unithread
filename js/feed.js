@@ -130,48 +130,61 @@
   function renderCard(post, currentUserId, index) {
     const author = getAuthor(post);
     const initials = (author.displayName || '?').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?';
-    const verifiedBadge = author.verified ? '<span class="verified-badge ml-1 text-blue-500" title="Verified student">✓</span>' : '';
-    const delay = Math.min(index, 7);
-    const typeLabel = post.type.charAt(0).toUpperCase() + post.type.slice(1);
+    const verifiedBadge = author.verified ? '<span class="verified-badge-inline" title="Verified student">✓</span>' : '';
     const action = primaryAction(post, currentUserId);
     const chips = detailChips(post);
+    const typeLabel = post.type.charAt(0).toUpperCase() + post.type.slice(1);
+    const avatarHtml = author.photoUrl
+      ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />'
+      : initials;
+
     return `
-      <article class="post-card app-card overflow-hidden fade-in-up delay-${delay} type-${post.type} bg-white dark:bg-neutral-800" data-post-id="${post.id}" style="animation-fill-mode: both;">
+      <div class="snap-slide">
+        <article class="post-card-full bg-white dark:bg-neutral-800 type-${post.type}" data-post-id="${post.id}">
 
-        <!-- Colored type header band -->
-        <div class="card-header-${post.type} px-4 py-2.5 flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
-            <span class="text-base leading-none">${getTypeIcon(post.type)}</span>
-            <span class="card-type-label-${post.type} text-xs font-bold uppercase tracking-widest">${typeLabel}</span>
+          <!-- Gradient header -->
+          <div class="card-gradient-${post.type} px-7 pt-7 pb-6 relative overflow-hidden">
+            <div class="deco-icon absolute right-5 top-3 text-[5.5rem] leading-none select-none pointer-events-none opacity-[0.12]">${getTypeIcon(post.type)}</div>
+            <div class="flex items-center justify-between mb-5 relative z-10">
+              <span class="card-type-label-${post.type} text-[11px] font-black uppercase tracking-[0.18em]">${typeLabel}</span>
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
+            </div>
+            <h2 class="text-[22px] font-extrabold text-neutral-900 dark:text-white leading-tight pr-10 relative z-10">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
           </div>
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
-        </div>
 
-        <!-- Card body -->
-        <div class="p-4 md:p-5">
+          <!-- Body -->
+          <div class="px-7 pt-5 pb-4">
 
-          <!-- Author row -->
-          <div class="flex items-center gap-2.5 mb-3">
-            <div class="avatar-initials w-9 h-9 rounded-full flex-shrink-0 text-sm font-semibold ${avatarColor(post.type)}">${author.photoUrl ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />' : initials}</div>
-            <div class="min-w-0">
-              <div class="flex items-center gap-1 flex-wrap">
-                <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-sm leading-tight">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
-                ${verifiedBadge}
+            <!-- Author -->
+            <div class="flex items-center gap-3 mb-5">
+              <div class="avatar-initials w-11 h-11 rounded-full flex-shrink-0 text-sm font-bold ${avatarColor(post.type)}">${avatarHtml}</div>
+              <div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-[15px]">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
+                  ${verifiedBadge}
+                </div>
+                <div class="text-neutral-400 text-xs mt-0.5">${formatTimeAgo(post.createdAt)}</div>
               </div>
-              <span class="text-neutral-400 dark:text-neutral-500 text-xs">${formatTimeAgo(post.createdAt)}</span>
+            </div>
+
+            <!-- Detail chips -->
+            ${chips ? '<div class="flex flex-wrap gap-2 mb-5">' + chips + '</div>' : ''}
+
+            <!-- Action footer -->
+            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-700/60 flex items-center justify-between">
+              <span class="text-xs text-neutral-400 dark:text-neutral-500">${action ? 'Interested in this?' : 'Posted on campus feed'}</span>
+              <div class="post-upvote-area">${action}</div>
             </div>
           </div>
 
-          <!-- Title -->
-          <h3 class="font-bold text-neutral-900 dark:text-white text-[16px] leading-snug mb-3">${(cardTitle(post)).replace(/</g, '&lt;')}</h3>
+          <!-- Scroll hint -->
+          <div class="pb-5 flex flex-col items-center gap-1">
+            <div class="w-10 h-1 rounded-full bg-neutral-200 dark:bg-neutral-600"></div>
+            <p class="text-[10px] text-neutral-300 dark:text-neutral-600 mt-1">scroll for next</p>
+          </div>
 
-          <!-- Detail chips -->
-          ${chips ? '<div class="flex flex-wrap gap-1.5 mb-4">' + chips + '</div>' : ''}
-
-          <!-- Footer: action -->
-          ${action ? '<div class="pt-3 border-t border-neutral-100 dark:border-neutral-700 flex justify-end">' + action + '</div>' : ''}
-        </div>
-      </article>
+        </article>
+      </div>
     `;
   }
 
@@ -259,33 +272,74 @@
     const countMaint = CampThread.getPosts().filter((p) => p.type === 'maintenance').length;
     const countPosts = CampThread.getPosts().filter((p) => p.type === 'post').length;
 
+    const filterLabels = { post: 'Posts', ride: 'Rides', task: 'Tasks', maintenance: 'Maintenance', all: 'All Posts' };
+    const filterLabel = filterLabels[filter] || 'Posts';
+    const filterOptions = [
+      { v: 'post', l: 'Posts' },
+      { v: 'ride', l: 'Rides' },
+      { v: 'task', l: 'Tasks' },
+      { v: 'maintenance', l: 'Maintenance' },
+      { v: 'all', l: 'All Posts' }
+    ].map((o) => `
+      <button type="button" class="filter-option w-full text-left px-4 py-2.5 text-sm rounded-xl flex items-center justify-between gap-3 transition-colors
+        ${filter === o.v ? 'font-semibold text-[#001489] dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'}"
+        data-filter="${o.v}">
+        <span>${o.l}</span>
+        ${filter === o.v ? '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
+      </button>
+    `).join('');
+
     container.setAttribute('data-feed-filter', filter);
     container.innerHTML = `
-      <div class="flex items-center justify-between mb-5 fade-in-up delay-0 flex-wrap gap-3">
+      <div class="feed-header flex items-center justify-between mb-4 fade-in-up delay-0">
         <h2 class="text-xl font-bold text-neutral-800 dark:text-white">Feed</h2>
-        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-thin flex-shrink-0">
-          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'post' ? 'active' : ''}" data-filter="post">📢 Posts</button>
-          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'ride' ? 'active' : ''}" data-filter="ride">🚗 Rides</button>
-          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'task' ? 'active' : ''}" data-filter="task">🤝 Tasks</button>
-          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'maintenance' ? 'active' : ''}" data-filter="maintenance">🔧 Maintenance</button>
-          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'all' ? 'active' : ''}" data-filter="all">All (${countAll})</button>
+        <div class="relative" id="filter-dropdown-wrapper">
+          <button id="filter-dropdown-btn" type="button" class="filter-pill active px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+            ${filterLabel}
+            <svg class="w-4 h-4 transition-transform duration-200" id="filter-chevron" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div id="filter-dropdown-menu" class="hidden absolute right-0 top-full mt-2 bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 p-1.5 z-50 min-w-[170px] fade-in-up">
+            ${filterOptions}
+          </div>
         </div>
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="feed-cards">
+      <div class="feed-snap-container" id="feed-cards">
         ${posts.length ? posts.map((p, i) => renderCard(p, currentUserId, i)).join('') : `
-        <div class="empty-state fade-in-up flex flex-col items-center justify-center py-12 px-4 text-center">
-          ${emptyStateSVG()}
-          <h3 class="text-xl font-bold text-neutral-800 dark:text-white mt-6">Your campus feed is quiet... for now</h3>
-          <p class="text-neutral-500 mt-2 max-w-sm">Be the first to share a ride, ask for help, or report an issue.</p>
-          <a href="#create" class="mt-6 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium text-white bg-sidebar-activeText hover:opacity-90 transition-opacity duration-200">Create Your First Post</a>
-        </div>
+          <div class="snap-slide">
+            <div class="flex flex-col items-center justify-center text-center px-6">
+              ${emptyStateSVG()}
+              <h3 class="text-xl font-bold text-neutral-800 dark:text-white mt-6">Your campus feed is quiet...</h3>
+              <p class="text-neutral-500 mt-2 max-w-sm text-sm">Be the first to share a ride, ask for help, or post some news.</p>
+              <a href="#create" class="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-white bg-[#001489] hover:opacity-90 transition-opacity">Create Your First Post</a>
+            </div>
+          </div>
         `}
       </div>
     `;
 
-    container.querySelectorAll('.feed-tab').forEach((btn) => {
+    // Dropdown toggle
+    const dropBtn = container.querySelector('#filter-dropdown-btn');
+    const dropMenu = container.querySelector('#filter-dropdown-menu');
+    const chevron = container.querySelector('#filter-chevron');
+    dropBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const isOpen = !dropMenu.classList.contains('hidden');
+      dropMenu.classList.toggle('hidden', isOpen);
+      if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    });
+    document.addEventListener('click', function closeDropdown(e) {
+      if (!container.querySelector('#filter-dropdown-wrapper')?.contains(e.target)) {
+        dropMenu.classList.add('hidden');
+        if (chevron) chevron.style.transform = '';
+        document.removeEventListener('click', closeDropdown);
+      }
+    });
+    container.querySelectorAll('.filter-option').forEach((btn) => {
       btn.addEventListener('click', function () {
         const f = this.getAttribute('data-filter');
+        dropMenu.classList.add('hidden');
         container.setAttribute('data-feed-filter', f);
         render();
       });

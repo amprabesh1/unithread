@@ -129,34 +129,80 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
   box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
-/* Post card top border by type */
-.post-card { border-top: 3px solid transparent; }
-.post-card.type-ride { border-top-color: #2A85FF; }
-.post-card.type-task { border-top-color: #FF8C00; }
-.post-card.type-maintenance { border-top-color: #FF6A55; }
-.post-card.type-post { border-top-color: #7C3AED; }
+/* ── Snap-scroll feed ───────────────────────────────────── */
+.feed-snap-container {
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  height: calc(100vh - 9.5rem);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.feed-snap-container::-webkit-scrollbar { display: none; }
 
-/* Card type header bands — light mode */
-.card-header-ride { background-color: #EAF3FF; }
-.card-header-task { background-color: #FFF5EB; }
-.card-header-maintenance { background-color: #FFEDEA; }
-.card-header-post { background-color: #F5EEFF; }
+.snap-slide {
+  scroll-snap-align: start;
+  min-height: calc(100vh - 9.5rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0;
+}
 
-/* Card type header bands — dark mode */
-.dark .card-header-ride { background-color: rgba(42,133,255,0.12); }
-.dark .card-header-task { background-color: rgba(255,140,0,0.12); }
-.dark .card-header-maintenance { background-color: rgba(255,106,85,0.12); }
-.dark .card-header-post { background-color: rgba(124,58,237,0.12); }
+@media (max-width: 768px) {
+  .feed-snap-container { height: calc(100vh - 12rem); }
+  .snap-slide { min-height: calc(100vh - 12rem); }
+}
 
-/* Type label colors in header bands */
-.card-type-label-ride { color: #1a6fd4; }
-.card-type-label-task { color: #c86a00; }
-.card-type-label-maintenance { color: #d94f3a; }
-.card-type-label-post { color: #6b21c8; }
-.dark .card-type-label-ride { color: #6aadff; }
-.dark .card-type-label-task { color: #ffaa44; }
-.dark .card-type-label-maintenance { color: #ff9080; }
-.dark .card-type-label-post { color: #c084fc; }
+/* Full-screen post card */
+.post-card-full {
+  width: 100%;
+  max-width: 580px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  transition: box-shadow 0.3s ease;
+}
+.post-card-full:hover {
+  box-shadow: 0 16px 60px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+}
+.dark .post-card-full {
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* Card gradient headers */
+.card-gradient-ride        { background: linear-gradient(135deg, #dbeeff 0%, #c3dfff 100%); }
+.card-gradient-task        { background: linear-gradient(135deg, #fff0dc 0%, #ffe0b8 100%); }
+.card-gradient-maintenance { background: linear-gradient(135deg, #ffe8e4 0%, #ffd2cb 100%); }
+.card-gradient-post        { background: linear-gradient(135deg, #f0e7ff 0%, #e4d4ff 100%); }
+.dark .card-gradient-ride        { background: linear-gradient(135deg, rgba(42,133,255,0.18) 0%, rgba(42,133,255,0.09) 100%); }
+.dark .card-gradient-task        { background: linear-gradient(135deg, rgba(255,140,0,0.18) 0%, rgba(255,140,0,0.09) 100%); }
+.dark .card-gradient-maintenance { background: linear-gradient(135deg, rgba(255,106,85,0.18) 0%, rgba(255,106,85,0.09) 100%); }
+.dark .card-gradient-post        { background: linear-gradient(135deg, rgba(124,58,237,0.18) 0%, rgba(124,58,237,0.09) 100%); }
+
+/* Type label colors */
+.card-type-label-ride        { color: #1a6fd4; }
+.card-type-label-task        { color: #b85c00; }
+.card-type-label-maintenance { color: #c43a28; }
+.card-type-label-post        { color: #5b1aa8; }
+.dark .card-type-label-ride        { color: #72b8ff; }
+.dark .card-type-label-task        { color: #ffb254; }
+.dark .card-type-label-maintenance { color: #ff9a8a; }
+.dark .card-type-label-post        { color: #c084fc; }
+
+/* Verified badge inline */
+.verified-badge-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #2563EB;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
 
 /* Staggered fade-in */
 @keyframes fadeInUp {
