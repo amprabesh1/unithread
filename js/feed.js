@@ -127,10 +127,18 @@
     return 'bg-type-maintenanceBg text-type-maintenanceText';
   }
 
-  function authorRow(author, initials, verifiedBadge, type, timeAgo) {
+  function studentSubtitle(author) {
+    if (!author.email) return 'Campus Student';
+    const domain = author.email.split('@')[1] || '';
+    const school = domain.replace(/\.(edu|ac\.uk|ac\.in|edu\..*)$/i, '').replace(/\./g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return (school || 'Campus') + ' · Student';
+  }
+
+  function authorRow(author, initials, verifiedBadge, type, timeAgo, showSubtitle) {
     const avatarHtml = author.photoUrl
       ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />'
       : initials;
+    const subtitle = showSubtitle ? '<div class="text-neutral-400 dark:text-neutral-500 text-[13px]">' + studentSubtitle(author) + '</div>' : '';
     return `
       <div class="flex items-center gap-3">
         <div class="avatar-initials w-12 h-12 rounded-full flex-shrink-0 text-base font-bold ${avatarColor(type)}" style="width:48px;height:48px;">${avatarHtml}</div>
@@ -139,7 +147,8 @@
             <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-[16px]">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
             ${verifiedBadge}
           </div>
-          <div class="text-neutral-400 text-sm">${timeAgo}</div>
+          ${subtitle}
+          <div class="text-neutral-400 text-[12px]">${timeAgo}</div>
         </div>
       </div>`;
   }
@@ -160,18 +169,41 @@
     const alreadyRequested = requests.some((r) => r.postId === post.id && r.fromUserId === currentUserId);
     const timeAgo = formatTimeAgo(post.createdAt);
 
-    // ── POST (Facebook-style) ──────────────────────────────
+    // ── POST (LinkedIn-style) ──────────────────────────────
     if (post.type === 'post') {
+      const likeKey = 'ut_likes_' + post.id;
+      const likeCount = parseInt(localStorage.getItem(likeKey) || '0');
       return `<div class="snap-slide">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
-          <div class="px-7 pt-7 pb-4 border-b border-neutral-100 dark:border-neutral-700">
-            ${authorRow(author, initials, verifiedBadge, 'post', timeAgo)}
+          <!-- Author header -->
+          <div class="px-6 pt-6 pb-4">
+            ${authorRow(author, initials, verifiedBadge, 'post', timeAgo, true)}
           </div>
-          <div class="px-7 py-6 flex-1 flex flex-col">
-            <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-snug mb-4">${(post.title || '').replace(/</g, '&lt;')}</h2>
-            ${post.content ? '<p class="text-neutral-700 dark:text-neutral-300 text-[17px] leading-relaxed flex-1">' + post.content.replace(/</g, '&lt;') + '</p>' : ''}
+          <!-- Content -->
+          <div class="px-6 pb-4 flex-1 flex flex-col">
+            <h2 class="text-xl font-bold text-neutral-900 dark:text-white leading-snug mb-3">${(post.title || '').replace(/</g, '&lt;')}</h2>
+            ${post.content ? '<p class="text-neutral-700 dark:text-neutral-300 text-base leading-relaxed">' + post.content.replace(/</g, '&lt;') + '</p>' : ''}
           </div>
-          <div class="px-7 pb-6">${scrollHint()}</div>
+          <!-- Social action bar -->
+          <div class="border-t border-neutral-100 dark:border-neutral-700 px-2 py-1 flex items-center justify-around">
+            <button type="button" class="post-like-btn flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-blue-600 transition-colors text-sm font-medium min-w-[60px]" data-post-id="${post.id}">
+              <i data-lucide="thumbs-up" class="w-5 h-5"></i>
+              <span class="text-xs like-count">${likeCount > 0 ? likeCount : 'Like'}</span>
+            </button>
+            <button type="button" class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-green-600 transition-colors text-sm font-medium min-w-[60px]">
+              <i data-lucide="message-square" class="w-5 h-5"></i>
+              <span class="text-xs">Comment</span>
+            </button>
+            <button type="button" class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-orange-500 transition-colors text-sm font-medium min-w-[60px]">
+              <i data-lucide="repeat-2" class="w-5 h-5"></i>
+              <span class="text-xs">Repost</span>
+            </button>
+            <button type="button" class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-purple-600 transition-colors text-sm font-medium min-w-[60px]">
+              <i data-lucide="send" class="w-5 h-5"></i>
+              <span class="text-xs">Send</span>
+            </button>
+          </div>
+          <div class="px-6 pb-4">${scrollHint()}</div>
         </article>
       </div>`;
     }
@@ -195,7 +227,7 @@
             <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(post.destination || 'Ride').replace(/</g, '&lt;')}</h2>
           </div>
           <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
-            ${authorRow(author, initials, verifiedBadge, 'ride', timeAgo)}
+            ${authorRow(author, initials, verifiedBadge, 'ride', timeAgo, true)}
             <div class="space-y-2 mt-1">
               ${dateStr ? '<div class="detail-row"><span>🕐</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Date & Time</div><strong>' + dateStr + '</strong></div></div>' : ''}
               ${post.seats != null ? '<div class="detail-row"><span>💺</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Seats Available</div><strong>' + post.seats + ' seats</strong></div></div>' : ''}
@@ -225,7 +257,7 @@
             <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
           </div>
           <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
-            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'task', timeAgo)}<span class="text-neutral-400 text-sm ml-1">needs help</span></div>
+            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'task', timeAgo, true)}</div>
             <div class="space-y-2">
               ${post.category ? '<div class="detail-row"><span>📁</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Category</div><strong>' + post.category.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
               ${post.estimatedEffort ? '<div class="detail-row"><span>⏱</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Effort</div><strong>' + post.estimatedEffort.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
@@ -256,7 +288,7 @@
             <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(post.issueDescription || post.title || 'Maintenance issue').replace(/</g, '&lt;')}</h2>
           </div>
           <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
-            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'maintenance', timeAgo)}<span class="text-neutral-400 text-sm ml-1">reported</span></div>
+            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'maintenance', timeAgo, true)}</div>
             <div class="space-y-2">
               ${post.location ? '<div class="detail-row"><span>📍</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Location</div><strong>' + post.location.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
               ${post.urgency ? '<div class="detail-row"><span>⚠️</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Urgency</div><strong>' + post.urgency.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
@@ -426,6 +458,19 @@
         dropMenu.classList.add('hidden');
         container.setAttribute('data-feed-filter', f);
         render();
+      });
+    });
+    container.querySelectorAll('.post-like-btn').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const postId = this.getAttribute('data-post-id');
+        const key = 'ut_likes_' + postId;
+        const liked = this.classList.toggle('text-blue-600');
+        let count = parseInt(localStorage.getItem(key) || '0');
+        count = liked ? count + 1 : Math.max(0, count - 1);
+        localStorage.setItem(key, count);
+        const countEl = this.querySelector('.like-count');
+        if (countEl) countEl.textContent = count > 0 ? count : 'Like';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       });
     });
     container.querySelectorAll('.post-action-request-join').forEach((btn) => {
