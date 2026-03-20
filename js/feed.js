@@ -142,45 +142,45 @@
       <div class="snap-slide">
         <article class="post-card-full bg-white dark:bg-neutral-800 type-${post.type}" data-post-id="${post.id}">
 
-          <!-- Gradient header -->
-          <div class="card-gradient-${post.type} px-7 pt-7 pb-6 relative overflow-hidden">
-            <div class="deco-icon absolute right-5 top-3 text-[5.5rem] leading-none select-none pointer-events-none opacity-[0.12]">${getTypeIcon(post.type)}</div>
-            <div class="flex items-center justify-between mb-5 relative z-10">
-              <span class="card-type-label-${post.type} text-[11px] font-black uppercase tracking-[0.18em]">${typeLabel}</span>
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
+          <!-- Gradient header — large, fills top -->
+          <div class="card-gradient-${post.type} px-8 pt-10 pb-8 relative overflow-hidden">
+            <div class="deco-icon absolute right-6 top-4 text-[8rem] leading-none select-none pointer-events-none opacity-[0.10]">${getTypeIcon(post.type)}</div>
+            <div class="flex items-center justify-between mb-6 relative z-10">
+              <span class="card-type-label-${post.type} text-[11px] font-black uppercase tracking-[0.2em]">${typeLabel}</span>
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
             </div>
-            <h2 class="text-[22px] font-extrabold text-neutral-900 dark:text-white leading-tight pr-10 relative z-10">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
+            <h2 class="text-3xl font-extrabold text-neutral-900 dark:text-white leading-tight pr-16 relative z-10">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
           </div>
 
           <!-- Body -->
-          <div class="px-7 pt-5 pb-4">
+          <div class="px-8 pt-6 pb-5 flex-1">
 
             <!-- Author -->
-            <div class="flex items-center gap-3 mb-5">
-              <div class="avatar-initials w-11 h-11 rounded-full flex-shrink-0 text-sm font-bold ${avatarColor(post.type)}">${avatarHtml}</div>
+            <div class="flex items-center gap-4 mb-6">
+              <div class="avatar-initials w-13 h-13 rounded-full flex-shrink-0 text-base font-bold ${avatarColor(post.type)}" style="width:52px;height:52px;">${avatarHtml}</div>
               <div>
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-[15px]">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-base">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
                   ${verifiedBadge}
                 </div>
-                <div class="text-neutral-400 text-xs mt-0.5">${formatTimeAgo(post.createdAt)}</div>
+                <div class="text-neutral-400 text-sm mt-0.5">${formatTimeAgo(post.createdAt)}</div>
               </div>
             </div>
 
             <!-- Detail chips -->
-            ${chips ? '<div class="flex flex-wrap gap-2 mb-5">' + chips + '</div>' : ''}
+            ${chips ? '<div class="flex flex-wrap gap-2.5 mb-6">' + chips + '</div>' : ''}
 
             <!-- Action footer -->
-            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-700/60 flex items-center justify-between">
-              <span class="text-xs text-neutral-400 dark:text-neutral-500">${action ? 'Interested in this?' : 'Posted on campus feed'}</span>
+            <div class="pt-5 border-t border-neutral-100 dark:border-neutral-700/60 flex items-center justify-between">
+              <span class="text-sm text-neutral-400 dark:text-neutral-500">${action ? 'Interested in this?' : 'Posted on campus feed'}</span>
               <div class="post-upvote-area">${action}</div>
             </div>
           </div>
 
           <!-- Scroll hint -->
-          <div class="pb-5 flex flex-col items-center gap-1">
+          <div class="py-4 flex flex-col items-center gap-1">
             <div class="w-10 h-1 rounded-full bg-neutral-200 dark:bg-neutral-600"></div>
-            <p class="text-[10px] text-neutral-300 dark:text-neutral-600 mt-1">scroll for next</p>
+            <p class="text-[11px] text-neutral-300 dark:text-neutral-600 mt-1">scroll for next</p>
           </div>
 
         </article>
@@ -291,8 +291,8 @@
 
     container.setAttribute('data-feed-filter', filter);
     container.innerHTML = `
-      <div class="feed-header flex items-center justify-between mb-4 fade-in-up delay-0">
-        <h2 class="text-xl font-bold text-neutral-800 dark:text-white">Feed</h2>
+      <div class="feed-header sticky top-14 z-20 bg-[#F0F2F5] dark:bg-[#18191A] flex items-center justify-between px-5 py-3 border-b border-neutral-200 dark:border-neutral-800">
+        <h2 class="text-base font-bold text-neutral-800 dark:text-white tracking-tight">Feed</h2>
         <div class="relative" id="filter-dropdown-wrapper">
           <button id="filter-dropdown-btn" type="button" class="filter-pill active px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
             ${filterLabel}
@@ -300,7 +300,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
             </svg>
           </button>
-          <div id="filter-dropdown-menu" class="hidden absolute right-0 top-full mt-2 bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 p-1.5 z-50 min-w-[170px] fade-in-up">
+          <div id="filter-dropdown-menu" class="hidden absolute right-0 top-full mt-2 bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 p-1.5 z-50 min-w-[170px]">
             ${filterOptions}
           </div>
         </div>

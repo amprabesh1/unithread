@@ -133,7 +133,8 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
 .feed-snap-container {
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
-  height: calc(100vh - 9.5rem);
+  /* topbar: 56px + feed-header: ~49px */
+  height: calc(100vh - 105px);
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -141,33 +142,37 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
 
 .snap-slide {
   scroll-snap-align: start;
-  min-height: calc(100vh - 9.5rem);
+  min-height: calc(100vh - 105px);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem 0;
+  align-items: stretch;
+  padding: 16px;
 }
 
 @media (max-width: 768px) {
-  .feed-snap-container { height: calc(100vh - 12rem); }
-  .snap-slide { min-height: calc(100vh - 12rem); }
+  .feed-snap-container { height: calc(100vh - 160px); }
+  .snap-slide { min-height: calc(100vh - 160px); padding: 10px; }
 }
 
-/* Full-screen post card */
+/* Full-width post card */
 .post-card-full {
   width: 100%;
-  max-width: 580px;
-  border-radius: 24px;
+  max-width: 100%;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
   transition: box-shadow 0.3s ease;
 }
-.post-card-full:hover {
-  box-shadow: 0 16px 60px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
-}
 .dark .post-card-full {
-  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
 }
+
+/* Feed view: flush, no padding — snap cards handle their own spacing */
+.feed-view { padding: 0 !important; margin: 0 !important; }
+
+/* All other views get comfortable padding */
+[data-view].active:not(.feed-view) { padding: 1rem 1.5rem 2rem; }
 
 /* Card gradient headers */
 .card-gradient-ride        { background: linear-gradient(135deg, #dbeeff 0%, #c3dfff 100%); }
