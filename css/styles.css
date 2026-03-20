@@ -129,29 +129,7 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
   box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
-/* ── Snap-scroll feed ───────────────────────────────────── */
-.feed-snap-container {
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  /* topbar: 56px + feed-header: ~49px */
-  height: calc(100vh - 105px);
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.feed-snap-container::-webkit-scrollbar { display: none; }
-
-.snap-slide {
-  scroll-snap-align: start;
-  min-height: calc(100vh - 105px);
-  display: flex;
-  align-items: stretch;
-  padding: 16px;
-}
-
-@media (max-width: 768px) {
-  .feed-snap-container { height: calc(100vh - 160px); }
-  .snap-slide { min-height: calc(100vh - 160px); padding: 10px; }
-}
+/* snap scroll styles now handled by .feed-view flex layout below */
 
 /* Full-width post card */
 .post-card-full {
@@ -168,8 +146,39 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
   box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
 }
 
-/* Feed view: flush, no padding — snap cards handle their own spacing */
-.feed-view { padding: 0 !important; margin: 0 !important; }
+/* Feed view fills viewport minus topbar, flex column — zero gap */
+.feed-view {
+  display: flex !important;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+}
+
+/* Feed snap container fills all remaining height after the feed-header */
+.feed-snap-container {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.feed-snap-container::-webkit-scrollbar { display: none; }
+
+.snap-slide {
+  scroll-snap-align: start;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  padding: 14px;
+}
+
+@media (max-width: 768px) {
+  .feed-view { height: calc(100vh - 56px - 56px); }
+  .snap-slide { padding: 8px; }
+}
 
 /* All other views get comfortable padding */
 [data-view].active:not(.feed-view) { padding: 1rem 1.5rem 2rem; }
@@ -193,6 +202,43 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
 .dark .card-type-label-task        { color: #ffb254; }
 .dark .card-type-label-maintenance { color: #ff9a8a; }
 .dark .card-type-label-post        { color: #c084fc; }
+
+/* Big CTA action buttons for cards */
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  border: none;
+}
+.btn-cta-ride { background: #2A85FF; color: #fff; }
+.btn-cta-ride:hover { background: #1a6fd4; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(42,133,255,0.35); }
+.btn-cta-task { background: #FF8C00; color: #fff; }
+.btn-cta-task:hover { background: #c86a00; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,140,0,0.35); }
+.btn-cta-maintenance { background: #FF6A55; color: #fff; }
+.btn-cta-maintenance:hover { background: #d94f3a; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,106,85,0.35); }
+.btn-cta:disabled, .btn-cta.sent { background: #e5e5e5; color: #a3a3a3; transform: none; box-shadow: none; cursor: default; }
+.dark .btn-cta:disabled, .dark .btn-cta.sent { background: #333; color: #666; }
+
+/* Detail info rows (location, time, etc.) — bigger */
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #525252;
+  padding: 6px 0;
+}
+.dark .detail-row { color: #a3a3a3; }
+.detail-row strong { color: #171717; font-weight: 600; }
+.dark .detail-row strong { color: #f5f5f5; }
 
 /* Verified badge inline */
 .verified-badge-inline {

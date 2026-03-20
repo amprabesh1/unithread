@@ -127,65 +127,149 @@
     return 'bg-type-maintenanceBg text-type-maintenanceText';
   }
 
+  function authorRow(author, initials, verifiedBadge, type, timeAgo) {
+    const avatarHtml = author.photoUrl
+      ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />'
+      : initials;
+    return `
+      <div class="flex items-center gap-3">
+        <div class="avatar-initials w-12 h-12 rounded-full flex-shrink-0 text-base font-bold ${avatarColor(type)}" style="width:48px;height:48px;">${avatarHtml}</div>
+        <div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-[16px]">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
+            ${verifiedBadge}
+          </div>
+          <div class="text-neutral-400 text-sm">${timeAgo}</div>
+        </div>
+      </div>`;
+  }
+
+  function scrollHint() {
+    return `<div class="mt-auto pt-4 flex flex-col items-center gap-1 opacity-40">
+      <div class="w-8 h-1 rounded-full bg-neutral-400 dark:bg-neutral-500"></div>
+      <p class="text-[10px] text-neutral-400 dark:text-neutral-500">scroll for next</p>
+    </div>`;
+  }
+
   function renderCard(post, currentUserId, index) {
     const author = getAuthor(post);
     const initials = (author.displayName || '?').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?';
     const verifiedBadge = author.verified ? '<span class="verified-badge-inline" title="Verified student">✓</span>' : '';
-    const action = primaryAction(post, currentUserId);
-    const chips = detailChips(post);
-    const typeLabel = post.type.charAt(0).toUpperCase() + post.type.slice(1);
-    const avatarHtml = author.photoUrl
-      ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />'
-      : initials;
+    const isAuthor = post.authorId === currentUserId;
+    const requests = CampThread.getRequests();
+    const alreadyRequested = requests.some((r) => r.postId === post.id && r.fromUserId === currentUserId);
+    const timeAgo = formatTimeAgo(post.createdAt);
 
-    return `
-      <div class="snap-slide">
-        <article class="post-card-full bg-white dark:bg-neutral-800 type-${post.type}" data-post-id="${post.id}">
+    // ── POST (Facebook-style) ──────────────────────────────
+    if (post.type === 'post') {
+      return `<div class="snap-slide">
+        <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
+          <div class="px-7 pt-7 pb-4 border-b border-neutral-100 dark:border-neutral-700">
+            ${authorRow(author, initials, verifiedBadge, 'post', timeAgo)}
+          </div>
+          <div class="px-7 py-6 flex-1 flex flex-col">
+            <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-snug mb-4">${(post.title || '').replace(/</g, '&lt;')}</h2>
+            ${post.content ? '<p class="text-neutral-700 dark:text-neutral-300 text-[17px] leading-relaxed flex-1">' + post.content.replace(/</g, '&lt;') + '</p>' : ''}
+          </div>
+          <div class="px-7 pb-6">${scrollHint()}</div>
+        </article>
+      </div>`;
+    }
 
-          <!-- Gradient header — large, fills top -->
-          <div class="card-gradient-${post.type} px-8 pt-10 pb-8 relative overflow-hidden">
-            <div class="deco-icon absolute right-6 top-4 text-[8rem] leading-none select-none pointer-events-none opacity-[0.10]">${getTypeIcon(post.type)}</div>
-            <div class="flex items-center justify-between mb-6 relative z-10">
-              <span class="card-type-label-${post.type} text-[11px] font-black uppercase tracking-[0.2em]">${typeLabel}</span>
+    // ── RIDE ──────────────────────────────────────────────
+    if (post.type === 'ride') {
+      const d = post.dateTime ? new Date(post.dateTime) : null;
+      const dateStr = d ? d.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      const ctaHtml = isAuthor ? '' : post.status !== 'open' ? '' :
+        alreadyRequested
+          ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Request Sent</button>'
+          : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Request to Join</button>';
+      return `<div class="snap-slide">
+        <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
+          <div class="card-gradient-ride px-7 pt-8 pb-7 relative overflow-hidden">
+            <div class="absolute right-5 top-3 text-[7rem] leading-none opacity-[0.09] select-none">🚗</div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="card-type-label-ride text-[11px] font-black uppercase tracking-[0.18em]">Ride Share</span>
               <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
             </div>
-            <h2 class="text-3xl font-extrabold text-neutral-900 dark:text-white leading-tight pr-16 relative z-10">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
+            <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(post.destination || 'Ride').replace(/</g, '&lt;')}</h2>
           </div>
-
-          <!-- Body -->
-          <div class="px-8 pt-6 pb-5 flex-1">
-
-            <!-- Author -->
-            <div class="flex items-center gap-4 mb-6">
-              <div class="avatar-initials w-13 h-13 rounded-full flex-shrink-0 text-base font-bold ${avatarColor(post.type)}" style="width:52px;height:52px;">${avatarHtml}</div>
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-base">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
-                  ${verifiedBadge}
-                </div>
-                <div class="text-neutral-400 text-sm mt-0.5">${formatTimeAgo(post.createdAt)}</div>
-              </div>
+          <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
+            ${authorRow(author, initials, verifiedBadge, 'ride', timeAgo)}
+            <div class="space-y-2 mt-1">
+              ${dateStr ? '<div class="detail-row"><span>🕐</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Date & Time</div><strong>' + dateStr + '</strong></div></div>' : ''}
+              ${post.seats != null ? '<div class="detail-row"><span>💺</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Seats Available</div><strong>' + post.seats + ' seats</strong></div></div>' : ''}
+              ${post.priceSplit != null ? '<div class="detail-row"><span>💵</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Cost Split</div><strong>$' + post.priceSplit + ' per person</strong></div></div>' : ''}
             </div>
-
-            <!-- Detail chips -->
-            ${chips ? '<div class="flex flex-wrap gap-2.5 mb-6">' + chips + '</div>' : ''}
-
-            <!-- Action footer -->
-            <div class="pt-5 border-t border-neutral-100 dark:border-neutral-700/60 flex items-center justify-between">
-              <span class="text-sm text-neutral-400 dark:text-neutral-500">${action ? 'Interested in this?' : 'Posted on campus feed'}</span>
-              <div class="post-upvote-area">${action}</div>
-            </div>
+            ${ctaHtml ? '<div class="mt-auto pt-3">' + ctaHtml + '</div>' : ''}
           </div>
-
-          <!-- Scroll hint -->
-          <div class="py-4 flex flex-col items-center gap-1">
-            <div class="w-10 h-1 rounded-full bg-neutral-200 dark:bg-neutral-600"></div>
-            <p class="text-[11px] text-neutral-300 dark:text-neutral-600 mt-1">scroll for next</p>
-          </div>
-
+          <div class="px-7 pb-5">${scrollHint()}</div>
         </article>
-      </div>
-    `;
+      </div>`;
+    }
+
+    // ── TASK ──────────────────────────────────────────────
+    if (post.type === 'task') {
+      const ctaHtml = isAuthor ? '' : post.status !== 'open' ? '' :
+        alreadyRequested
+          ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
+          : '<button type="button" class="post-action-offer-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
+      return `<div class="snap-slide">
+        <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
+          <div class="card-gradient-task px-7 pt-8 pb-7 relative overflow-hidden">
+            <div class="absolute right-5 top-3 text-[7rem] leading-none opacity-[0.09] select-none">🤝</div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="card-type-label-task text-[11px] font-black uppercase tracking-[0.18em]">Task Request</span>
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
+            </div>
+            <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
+          </div>
+          <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
+            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'task', timeAgo)}<span class="text-neutral-400 text-sm ml-1">needs help</span></div>
+            <div class="space-y-2">
+              ${post.category ? '<div class="detail-row"><span>📁</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Category</div><strong>' + post.category.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
+              ${post.estimatedEffort ? '<div class="detail-row"><span>⏱</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Effort</div><strong>' + post.estimatedEffort.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
+              ${post.compensation ? '<div class="detail-row"><span>💵</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Compensation</div><strong>' + post.compensation.replace(/</g, '&lt;') + '</strong></div></div>' : '<div class="detail-row"><span>💵</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Compensation</div><strong>Volunteer</strong></div></div>'}
+            </div>
+            ${ctaHtml ? '<div class="mt-auto pt-3">' + ctaHtml + '</div>' : ''}
+          </div>
+          <div class="px-7 pb-5">${scrollHint()}</div>
+        </article>
+      </div>`;
+    }
+
+    // ── MAINTENANCE ────────────────────────────────────────
+    if (post.type === 'maintenance') {
+      const upvoteCount = CampThread.getUpvoteCount(post.id) || 0;
+      const upvoted = CampThread.hasUserUpvoted(post.id);
+      const ctaHtml = `<button type="button" class="post-action-upvote btn-cta btn-cta-maintenance ${upvoted ? 'sent' : ''}" data-post-id="${post.id}">
+        ${upvoted ? '✓ You Supported This' : '▲ Support This — ' + upvoteCount + ' student' + (upvoteCount !== 1 ? 's' : '') + ' already'}
+      </button>`;
+      return `<div class="snap-slide">
+        <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
+          <div class="card-gradient-maintenance px-7 pt-7 pb-6 relative overflow-hidden">
+            <div class="absolute right-5 top-3 text-[7rem] leading-none opacity-[0.09] select-none">🔧</div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-black uppercase tracking-wide">🚨 Student Needs Help</span>
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
+            </div>
+            <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(post.issueDescription || post.title || 'Maintenance issue').replace(/</g, '&lt;')}</h2>
+          </div>
+          <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
+            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'maintenance', timeAgo)}<span class="text-neutral-400 text-sm ml-1">reported</span></div>
+            <div class="space-y-2">
+              ${post.location ? '<div class="detail-row"><span>📍</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Location</div><strong>' + post.location.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
+              ${post.urgency ? '<div class="detail-row"><span>⚠️</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Urgency</div><strong>' + post.urgency.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
+            </div>
+            <div class="mt-auto pt-3 post-upvote-area">${ctaHtml}</div>
+          </div>
+          <div class="px-7 pb-5">${scrollHint()}</div>
+        </article>
+      </div>`;
+    }
+
+    // fallback
+    return `<div class="snap-slide"><article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col items-center justify-center p-8" data-post-id="${post.id}"><p class="text-neutral-500">${(cardTitle(post)).replace(/</g, '&lt;')}</p></article></div>`;
   }
 
   function emptyStateSVG() {
@@ -366,11 +450,10 @@
       btn.addEventListener('click', function () {
         const postId = this.getAttribute('data-post-id');
         CampThread.toggleUpvote(postId);
-        const countEl = this.querySelector('.post-upvote-count');
-        if (countEl) countEl.textContent = CampThread.getUpvoteCount(postId);
-        this.classList.toggle('!bg-type-rideBg', CampThread.hasUserUpvoted(postId));
-        this.classList.toggle('!border-type-rideText', CampThread.hasUserUpvoted(postId));
-        this.classList.toggle('!text-type-rideText', CampThread.hasUserUpvoted(postId));
+        const count = CampThread.getUpvoteCount(postId);
+        const upvoted = CampThread.hasUserUpvoted(postId);
+        this.classList.toggle('sent', upvoted);
+        this.textContent = upvoted ? '✓ You Supported This' : '▲ Support This — ' + count + ' student' + (count !== 1 ? 's' : '') + ' already';
       });
     });
 
