@@ -130,28 +130,46 @@
   function renderCard(post, currentUserId, index) {
     const author = getAuthor(post);
     const initials = (author.displayName || '?').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?';
-    const verifiedBadge = author.verified ? '<span class="verified-badge ml-0.5" title="Verified student">✓</span>' : '';
+    const verifiedBadge = author.verified ? '<span class="verified-badge ml-1 text-blue-500" title="Verified student">✓</span>' : '';
     const delay = Math.min(index, 7);
+    const typeLabel = post.type.charAt(0).toUpperCase() + post.type.slice(1);
+    const action = primaryAction(post, currentUserId);
+    const chips = detailChips(post);
     return `
-      <article class="post-card app-card p-4 md:p-5 fade-in-up delay-${delay} bg-white dark:bg-neutral-800 border border-transparent dark:border-neutral-700 type-${post.type}" data-post-id="${post.id}" style="animation-fill-mode: both;">
-        <div class="flex gap-3">
-          <div class="avatar-initials w-10 h-10 rounded-full flex-shrink-0 text-sm ${avatarColor(post.type)}">${author.photoUrl ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />' : initials}</div>
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="font-semibold text-neutral-800 dark:text-neutral-100 text-[15px]">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
+      <article class="post-card app-card overflow-hidden fade-in-up delay-${delay} type-${post.type} bg-white dark:bg-neutral-800" data-post-id="${post.id}" style="animation-fill-mode: both;">
+
+        <!-- Colored type header band -->
+        <div class="card-header-${post.type} px-4 py-2.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-base leading-none">${getTypeIcon(post.type)}</span>
+            <span class="card-type-label-${post.type} text-xs font-bold uppercase tracking-widest">${typeLabel}</span>
+          </div>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
+        </div>
+
+        <!-- Card body -->
+        <div class="p-4 md:p-5">
+
+          <!-- Author row -->
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="avatar-initials w-9 h-9 rounded-full flex-shrink-0 text-sm font-semibold ${avatarColor(post.type)}">${author.photoUrl ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />' : initials}</div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1 flex-wrap">
+                <span class="font-semibold text-neutral-900 dark:text-neutral-100 text-sm leading-tight">${(author.displayName || 'Unknown').replace(/</g, '&lt;')}</span>
                 ${verifiedBadge}
-                <span class="text-neutral-400 text-sm flex-shrink-0">${formatTimeAgo(post.createdAt)}</span>
               </div>
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getTypeBadgeClass(post.type)}">${getTypeIcon(post.type)} ${post.type.charAt(0).toUpperCase() + post.type.slice(1)}</span>
-            </div>
-            <h3 class="font-bold text-neutral-800 dark:text-neutral-50 text-base mt-2 leading-snug">${(cardTitle(post)).replace(/</g, '&lt;')}</h3>
-            <div class="flex flex-wrap gap-1.5 mt-2">${detailChips(post)}</div>
-            <div class="mt-4 flex items-center justify-between flex-wrap gap-2">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(post)}">${getStatusLabel(post)}</span>
-              <div class="post-upvote-area">${primaryAction(post, currentUserId)}</div>
+              <span class="text-neutral-400 dark:text-neutral-500 text-xs">${formatTimeAgo(post.createdAt)}</span>
             </div>
           </div>
+
+          <!-- Title -->
+          <h3 class="font-bold text-neutral-900 dark:text-white text-[16px] leading-snug mb-3">${(cardTitle(post)).replace(/</g, '&lt;')}</h3>
+
+          <!-- Detail chips -->
+          ${chips ? '<div class="flex flex-wrap gap-1.5 mb-4">' + chips + '</div>' : ''}
+
+          <!-- Footer: action -->
+          ${action ? '<div class="pt-3 border-t border-neutral-100 dark:border-neutral-700 flex justify-end">' + action + '</div>' : ''}
         </div>
       </article>
     `;
@@ -228,7 +246,7 @@
   function render() {
     const container = document.getElementById('view-feed');
     if (!container) return;
-    const filter = (container.getAttribute('data-feed-filter') || 'all').toLowerCase();
+    const filter = (container.getAttribute('data-feed-filter') || 'post').toLowerCase();
     const searchQuery = (document.getElementById('top-search') && document.getElementById('top-search').value) || '';
     let posts = CampThread.getPosts()
       .filter((p) => filter === 'all' || p.type === filter)
@@ -243,17 +261,17 @@
 
     container.setAttribute('data-feed-filter', filter);
     container.innerHTML = `
-      <div class="mb-4 fade-in-up delay-0">
-        <h2 class="text-xl font-bold text-neutral-800 dark:text-white mb-3">Feed</h2>
-        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'post' ? 'active' : ''}" data-filter="post">Posts (${countPosts})</button>
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'ride' ? 'active' : ''}" data-filter="ride">Rides (${countRides})</button>
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'task' ? 'active' : ''}" data-filter="task">Tasks (${countTasks})</button>
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'maintenance' ? 'active' : ''}" data-filter="maintenance">Maintenance (${countMaint})</button>
-          <button type="button" class="feed-tab filter-pill px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'all' ? 'active' : ''}" data-filter="all">All (${countAll})</button>
+      <div class="flex items-center justify-between mb-5 fade-in-up delay-0 flex-wrap gap-3">
+        <h2 class="text-xl font-bold text-neutral-800 dark:text-white">Feed</h2>
+        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-thin flex-shrink-0">
+          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'post' ? 'active' : ''}" data-filter="post">📢 Posts</button>
+          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'ride' ? 'active' : ''}" data-filter="ride">🚗 Rides</button>
+          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'task' ? 'active' : ''}" data-filter="task">🤝 Tasks</button>
+          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'maintenance' ? 'active' : ''}" data-filter="maintenance">🔧 Maintenance</button>
+          <button type="button" class="feed-tab filter-pill px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${filter === 'all' ? 'active' : ''}" data-filter="all">All (${countAll})</button>
         </div>
       </div>
-      <div class="space-y-4" id="feed-cards">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="feed-cards">
         ${posts.length ? posts.map((p, i) => renderCard(p, currentUserId, i)).join('') : `
         <div class="empty-state fade-in-up flex flex-col items-center justify-center py-12 px-4 text-center">
           ${emptyStateSVG()}

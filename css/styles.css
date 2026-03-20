@@ -129,12 +129,34 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background-co
   box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
-/* Post cards — type-colored left accent border in light mode */
-.post-card[data-post-id] { border-left: 3px solid transparent; }
-.post-card.type-ride { border-left-color: #2A85FF; }
-.post-card.type-task { border-left-color: #FF8C00; }
-.post-card.type-maintenance { border-left-color: #FF6A55; }
-.post-card.type-post { border-left-color: #7C3AED; }
+/* Post card top border by type */
+.post-card { border-top: 3px solid transparent; }
+.post-card.type-ride { border-top-color: #2A85FF; }
+.post-card.type-task { border-top-color: #FF8C00; }
+.post-card.type-maintenance { border-top-color: #FF6A55; }
+.post-card.type-post { border-top-color: #7C3AED; }
+
+/* Card type header bands — light mode */
+.card-header-ride { background-color: #EAF3FF; }
+.card-header-task { background-color: #FFF5EB; }
+.card-header-maintenance { background-color: #FFEDEA; }
+.card-header-post { background-color: #F5EEFF; }
+
+/* Card type header bands — dark mode */
+.dark .card-header-ride { background-color: rgba(42,133,255,0.12); }
+.dark .card-header-task { background-color: rgba(255,140,0,0.12); }
+.dark .card-header-maintenance { background-color: rgba(255,106,85,0.12); }
+.dark .card-header-post { background-color: rgba(124,58,237,0.12); }
+
+/* Type label colors in header bands */
+.card-type-label-ride { color: #1a6fd4; }
+.card-type-label-task { color: #c86a00; }
+.card-type-label-maintenance { color: #d94f3a; }
+.card-type-label-post { color: #6b21c8; }
+.dark .card-type-label-ride { color: #6aadff; }
+.dark .card-type-label-task { color: #ffaa44; }
+.dark .card-type-label-maintenance { color: #ff9080; }
+.dark .card-type-label-post { color: #c084fc; }
 
 /* Staggered fade-in */
 @keyframes fadeInUp {
