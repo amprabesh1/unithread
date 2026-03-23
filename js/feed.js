@@ -233,7 +233,7 @@
       const dateStr = d ? d.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
       const ctaHtml = isAuthor ? '' :
         alreadyRequested
-          ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Request Sent</button>'
+          ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Ride request sent</button>'
           : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Ask for Ride</button>';
       return `<div class="snap-slide">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">

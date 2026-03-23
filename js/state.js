@@ -153,6 +153,37 @@ const UniThread = (function () {
     };
   }
 
+  function postSignature(p) {
+    return JSON.stringify({
+      type: p.type || '',
+      title: p.title || '',
+      content: p.content || '',
+      destination: p.destination || '',
+      dateTime: p.date_time || p.dateTime || '',
+      seats: p.seats != null ? Number(p.seats) : null,
+      priceSplit: p.price_split != null ? Number(p.price_split) : (p.priceSplit != null ? Number(p.priceSplit) : null),
+      description: p.description || '',
+      category: p.category || '',
+      estimatedEffort: p.estimated_effort || p.estimatedEffort || '',
+      compensation: p.compensation || '',
+      location: p.location || '',
+      issueDescription: p.issue_description || p.issueDescription || '',
+      urgency: p.urgency || ''
+    });
+  }
+
+  function dedupeBackendRows(rows) {
+    const seen = new Set();
+    const unique = [];
+    (rows || []).forEach((r) => {
+      const key = postSignature(r);
+      if (seen.has(key)) return;
+      seen.add(key);
+      unique.push(r);
+    });
+    return unique;
+  }
+
   function buildBackendDemoPosts() {
     return [
       { type: 'post', status: 'posted', title: 'Campus starter thread: introduce yourself', content: 'Drop your major, year, and one thing you wish you knew before semester started. New students keep finding this thread helpful.', createdAt: pastDate(1), imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1400&q=80' },
@@ -205,10 +236,10 @@ const UniThread = (function () {
     if (!hasBackend()) return;
     const seeded = await seedBackendIfEmpty();
     const rows = await window.SupaClient.listPosts();
-    posts = rows.map(toUiPost);
+    posts = dedupeBackendRows(rows).map(toUiPost);
     if (seeded && !posts.length) {
       const secondRead = await window.SupaClient.listPosts();
-      posts = secondRead.map(toUiPost);
+      posts = dedupeBackendRows(secondRead).map(toUiPost);
     }
     save(STORAGE_KEYS.posts, posts);
     const reqRows = await window.SupaClient.listRequests();
