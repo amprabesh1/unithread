@@ -102,7 +102,7 @@
                 <span class="font-medium text-neutral-800 dark:text-white">${fromUser.displayName}</span>
                 <span class="text-sm text-neutral-500">${formatDate(r.createdAt)}</span>
               </div>
-              <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">${post ? (post.type === 'ride' ? 'Ride to ' + (post.destination || '—') : 'Task: ' + (post.description || '—').slice(0, 60)) : ''}</p>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">${post ? (post.type === 'ride' ? 'Ride to ' + (post.destination || '—') : post.type === 'task' ? 'Task: ' + (post.description || '—').slice(0, 60) : 'Maintenance: ' + ((post.issueDescription || post.location || 'Issue').slice(0, 60))) : ''}</p>
               ${r.status === 'pending' ? `
                 <div class="flex gap-2">
                   <button type="button" class="activity-accept px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-green-500 hover:bg-green-600" data-req-id="${r.id}" data-post-id="${r.postId}" data-type="${post?.type || 'ride'}">Accept</button>
@@ -135,6 +135,7 @@
         await CampThread.updateRequest(reqId, { status: 'accepted' });
         if (type === 'ride') await CampThread.updatePost(postId, { status: 'full' });
         if (type === 'task') await CampThread.updatePost(postId, { status: 'assigned' });
+        if (type === 'maintenance') await CampThread.updatePost(postId, { status: 'inProgress' });
         // Once one request/offer is accepted, close other pending ones for same post
         CampThread.getRequests()
           .filter((r) => r.postId === postId && r.id !== reqId && r.status === 'pending')

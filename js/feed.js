@@ -116,8 +116,8 @@
     if (post.type === 'ride') {
       if (isAuthor) return '';
       if (post.status !== 'open') return '';
-      if (alreadyRequested) return '<span class="text-sm text-neutral-500">Requested</span>';
-      return '<button type="button" class="post-action-request-join btn-action btn-action-ride text-neutral-700 dark:text-neutral-200 dark:border-neutral-600" data-post-id="' + post.id + '">Request to Join</button>';
+      if (alreadyRequested) return '<span class="text-sm text-neutral-500">Ride request sent</span>';
+      return '<button type="button" class="post-action-request-join btn-action btn-action-ride text-neutral-700 dark:text-neutral-200 dark:border-neutral-600" data-post-id="' + post.id + '">Ask for Ride</button>';
     }
     if (post.type === 'task') {
       if (isAuthor) return '';
@@ -234,7 +234,7 @@
       const ctaHtml = isAuthor ? '' :
         alreadyRequested
           ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Request Sent</button>'
-          : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Request to Join</button>';
+          : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Ask for Ride</button>';
       return `<div class="snap-slide">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
           <div class="card-gradient-ride px-7 pt-8 pb-7 relative overflow-hidden">
@@ -293,7 +293,13 @@
     if (post.type === 'maintenance') {
       const upvoteCount = CampThread.getUpvoteCount(post.id) || 0;
       const upvoted = CampThread.hasUserUpvoted(post.id);
-      const ctaHtml = `<button type="button" class="post-action-upvote btn-cta btn-cta-maintenance ${upvoted ? 'sent' : ''}" data-post-id="${post.id}">
+      const requestSent = requests.some((r) => r.postId === post.id && r.fromUserId === currentUserId);
+      const offerBtn = isAuthor
+        ? ''
+        : requestSent
+          ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
+          : '<button type="button" class="post-action-maintenance-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
+      const supportBtn = `<button type="button" class="post-action-upvote btn-cta btn-cta-maintenance ${upvoted ? 'sent' : ''}" data-post-id="${post.id}">
         ${upvoted ? '✓ You Supported This' : '▲ Support This — ' + upvoteCount + ' student' + (upvoteCount !== 1 ? 's' : '') + ' already'}
       </button>`;
       return `<div class="snap-slide">
@@ -312,7 +318,7 @@
               ${post.location ? '<div class="detail-row"><span>📍</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Location</div><strong>' + post.location.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
               ${post.urgency ? '<div class="detail-row"><span>⚠️</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Urgency</div><strong>' + post.urgency.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
             </div>
-            <div class="mt-auto pt-3 post-upvote-area">${ctaHtml}</div>
+            <div class="mt-auto pt-3 post-upvote-area flex flex-col gap-2">${offerBtn}${supportBtn}</div>
           </div>
           <div class="px-7 pb-5">${scrollHint()}</div>
         </article>
@@ -704,9 +710,9 @@
           return;
         }
         if (CampThread.getRequests().length === before) {
-          window.alert('You already requested to join this ride.');
+          window.alert('You already sent an ask request for this ride.');
         }
-        this.textContent = 'Requested';
+        this.textContent = 'Ride request sent';
         this.disabled = true;
         this.classList.add('opacity-75');
       });
@@ -722,6 +728,23 @@
         }
         if (CampThread.getRequests().length === before) {
           window.alert('You already sent an offer for this task.');
+        }
+        this.textContent = 'Offer sent';
+        this.disabled = true;
+        this.classList.add('opacity-75');
+      });
+    });
+    container.querySelectorAll('.post-action-maintenance-help').forEach((btn) => {
+      btn.addEventListener('click', async function () {
+        const postId = this.getAttribute('data-post-id');
+        const before = CampThread.getRequests().length;
+        const created = await CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'maintenance' });
+        if (!created) {
+          window.alert('You cannot offer help on your own post.');
+          return;
+        }
+        if (CampThread.getRequests().length === before) {
+          window.alert('You already sent an offer for this maintenance issue.');
         }
         this.textContent = 'Offer sent';
         this.disabled = true;

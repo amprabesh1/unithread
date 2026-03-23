@@ -14,7 +14,8 @@ const UniThread = (function () {
     groups: 'unithread_groups',
     groupMembers: 'unithread_group_members',
     groupMessages: 'unithread_group_messages',
-    theme: 'unithread_theme'
+    theme: 'unithread_theme',
+    backendSeeded: 'unithread_backend_demo_seeded'
   };
 
   function load(key, defaultValue) {
@@ -152,6 +153,36 @@ const UniThread = (function () {
     };
   }
 
+  function buildBackendDemoPosts() {
+    return [
+      { type: 'post', status: 'posted', title: 'Campus starter thread: introduce yourself', content: 'Drop your major, year, and one thing you wish you knew before semester started. New students keep finding this thread helpful.', createdAt: pastDate(1), imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1400&q=80' },
+      { type: 'ride', status: 'open', destination: 'Nashville Airport', dateTime: '2026-03-29T15:30', seats: 3, priceSplit: 8, title: 'Airport ride this Sunday', createdAt: pastDate(2) },
+      { type: 'task', status: 'open', description: 'Need help carrying mini-fridge + two boxes from parking lot to dorm. Should take around 25 minutes.', category: 'Moving', estimatedEffort: '30 mins', compensation: '$15 + coffee', title: 'Quick dorm move-in help needed', createdAt: pastDate(3) },
+      { type: 'maintenance', status: 'reported', location: 'Library 2nd floor', issueDescription: 'Study room AC is blowing warm air and gets stuffy fast during evening hours.', urgency: 'High', title: 'AC issue in library study room', createdAt: pastDate(4) },
+      { type: 'post', status: 'posted', title: 'Confession: I opened Canvas for motivation and accidentally took a 2-hour nap', content: 'Sat down to plan my week, saw five due dates, closed laptop \"for a mental reset,\" woke up at 6:40pm with one sock on and zero progress. If anyone has a real study schedule that actually works, please share before my GPA files a missing person report.', createdAt: pastDate(6), imageUrl: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?auto=format&fit=crop&w=1400&q=80' },
+      { type: 'ride', status: 'open', destination: 'Walmart + Target run', dateTime: '2026-03-27T18:00', seats: 2, priceSplit: 5, title: 'Evening grocery run', createdAt: pastDate(8) },
+      { type: 'task', status: 'open', description: 'Looking for someone strong in Calculus II for a 1-hour review before quiz. I have notes and snacks.', category: 'Tutoring', estimatedEffort: '1 hour', compensation: '$20', title: 'Calc II review partner needed', createdAt: pastDate(10) },
+      { type: 'maintenance', status: 'reported', location: 'Student Center, east entrance', issueDescription: 'Water fountain bottle filler is not working. Screen is on but no water flow.', urgency: 'Medium', title: 'Water fountain not dispensing', createdAt: pastDate(14) }
+    ];
+  }
+
+  async function seedBackendIfEmpty() {
+    if (!hasBackend() || !user?.id) return false;
+    const seeded = load(STORAGE_KEYS.backendSeeded, false);
+    if (seeded) return false;
+    const existing = await window.SupaClient.listPosts();
+    if ((existing || []).length) {
+      save(STORAGE_KEYS.backendSeeded, true);
+      return false;
+    }
+    const demo = buildBackendDemoPosts();
+    for (const p of demo) {
+      await window.SupaClient.createPost(p, user.id);
+    }
+    save(STORAGE_KEYS.backendSeeded, true);
+    return true;
+  }
+
   async function syncProfilesForPostsAndRequests() {
     if (!hasBackend()) return;
     const ids = []
@@ -172,8 +203,13 @@ const UniThread = (function () {
 
   async function syncFromBackend() {
     if (!hasBackend()) return;
+    const seeded = await seedBackendIfEmpty();
     const rows = await window.SupaClient.listPosts();
     posts = rows.map(toUiPost);
+    if (seeded && !posts.length) {
+      const secondRead = await window.SupaClient.listPosts();
+      posts = secondRead.map(toUiPost);
+    }
     save(STORAGE_KEYS.posts, posts);
     const reqRows = await window.SupaClient.listRequests();
     requests = reqRows.map(toUiRequest);
