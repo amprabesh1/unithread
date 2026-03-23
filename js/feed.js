@@ -60,6 +60,18 @@
     return d.toLocaleDateString();
   }
 
+  function formatPostedDateTime(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
   function cardTitle(post) {
     if (post.title) return post.title;
     if (post.type === 'ride') return post.destination || 'Ride share';
@@ -134,7 +146,7 @@
     return (school || 'Campus') + ' · Student';
   }
 
-  function authorRow(author, initials, verifiedBadge, type, timeAgo, showSubtitle) {
+  function authorRow(author, initials, verifiedBadge, type, timeAgo, postedAt, showSubtitle) {
     const avatarHtml = author.photoUrl
       ? '<img src="' + author.photoUrl + '" alt="" class="w-full h-full rounded-full object-cover" />'
       : initials;
@@ -148,7 +160,7 @@
             ${verifiedBadge}
           </div>
           ${subtitle}
-          <div class="text-neutral-400 text-[12px]">${timeAgo}</div>
+          <div class="text-neutral-400 text-[12px]">Posted ${timeAgo}${postedAt ? ' · ' + postedAt : ''}</div>
         </div>
       </div>`;
   }
@@ -171,39 +183,56 @@
 
     // ── POST (LinkedIn-style) ──────────────────────────────
     if (post.type === 'post') {
-      const likeKey = 'ut_likes_' + post.id;
-      const likeCount = parseInt(localStorage.getItem(likeKey) || '0');
-      return `<div class="snap-slide">
+      const upKey = 'ut_up_' + post.id;
+      const downKey = 'ut_down_' + post.id;
+      const upUserKey = 'ut_upvoted_' + post.id;
+      const downUserKey = 'ut_downvoted_' + post.id;
+      const commentKey = 'ut_comments_' + post.id;
+      const upCount = parseInt(localStorage.getItem(upKey) || '0');
+      const downCount = parseInt(localStorage.getItem(downKey) || '0');
+      const upVoted = localStorage.getItem(upUserKey) === '1';
+      const downVoted = localStorage.getItem(downUserKey) === '1';
+      const voteScore = upCount - downCount;
+      const commentCount = (() => {
+        try {
+          const arr = JSON.parse(localStorage.getItem(commentKey) || '[]');
+          return Array.isArray(arr) ? arr.length : 0;
+        } catch (_) {
+          return 0;
+        }
+      })();
+      return `<div class="snap-slide" style="height:auto;min-height:0;">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
           <!-- Author header -->
           <div class="px-6 pt-6 pb-4">
-            ${authorRow(author, initials, verifiedBadge, 'post', timeAgo, true)}
+            ${authorRow(author, initials, verifiedBadge, 'post', timeAgo, formatPostedDateTime(post.createdAt), true)}
           </div>
           <!-- Content -->
-          <div class="px-6 pb-4 flex-1 flex flex-col">
+          <div class="px-6 pb-2">
             <h2 class="text-xl font-bold text-neutral-900 dark:text-white leading-snug mb-3">${(post.title || '').replace(/</g, '&lt;')}</h2>
             ${post.content ? '<p class="text-neutral-700 dark:text-neutral-300 text-base leading-relaxed">' + post.content.replace(/</g, '&lt;') + '</p>' : ''}
+            ${post.imageUrl ? '<div class="mt-4 overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-700"><img src="' + post.imageUrl.replace(/"/g, '&quot;') + '" alt="Post image" class="w-full h-auto max-h-[360px] object-cover" loading="lazy" /></div>' : ''}
           </div>
           <!-- Social action bar -->
-          <div class="border-t border-neutral-100 dark:border-neutral-700 px-2 py-1 flex items-center justify-around">
-            <button type="button" class="post-like-btn flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-blue-600 transition-colors text-sm font-medium min-w-[60px]" data-post-id="${post.id}">
-              <i data-lucide="thumbs-up" class="w-5 h-5"></i>
-              <span class="text-xs like-count">${likeCount > 0 ? likeCount : 'Like'}</span>
+          <div class="border-t border-neutral-100 dark:border-neutral-700 mt-2 px-4 pt-3 pb-3 flex items-center gap-4 overflow-x-auto">
+            <div class="post-vote-box inline-flex items-center rounded-full bg-neutral-100 dark:bg-neutral-700/60 text-neutral-800 dark:text-neutral-100 px-1.5 py-1 gap-2 whitespace-nowrap" data-post-id="${post.id}">
+              <button type="button" class="post-vote-up inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors ${upVoted ? 'text-blue-600' : 'text-neutral-600 dark:text-neutral-300'}" data-post-id="${post.id}" aria-label="Upvote">
+                <i data-lucide="arrow-big-up" class="w-5 h-5"></i>
+              </button>
+              <span class="vote-score min-w-[1.75rem] text-center text-base font-semibold">${voteScore}</span>
+              <button type="button" class="post-vote-down inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors ${downVoted ? 'text-red-500' : 'text-neutral-600 dark:text-neutral-300'}" data-post-id="${post.id}" aria-label="Downvote">
+                <i data-lucide="arrow-big-down" class="w-5 h-5"></i>
+              </button>
+            </div>
+            <button type="button" class="post-comment-btn inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-700/60 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors text-base font-medium whitespace-nowrap" data-post-id="${post.id}">
+              <i data-lucide="message-circle" class="w-5 h-5"></i>
+              <span class="comment-count">${commentCount}</span>
             </button>
-            <button type="button" class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-green-600 transition-colors text-sm font-medium min-w-[60px]">
-              <i data-lucide="message-square" class="w-5 h-5"></i>
-              <span class="text-xs">Comment</span>
-            </button>
-            <button type="button" class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-orange-500 transition-colors text-sm font-medium min-w-[60px]">
-              <i data-lucide="repeat-2" class="w-5 h-5"></i>
-              <span class="text-xs">Repost</span>
-            </button>
-            <button type="button" class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-purple-600 transition-colors text-sm font-medium min-w-[60px]">
-              <i data-lucide="send" class="w-5 h-5"></i>
-              <span class="text-xs">Send</span>
+            <button type="button" class="post-share-btn inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-700/60 text-neutral-800 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors text-base font-semibold whitespace-nowrap" data-post-id="${post.id}">
+              <i data-lucide="share-2" class="w-5 h-5"></i>
+              <span class="text-base">Share</span>
             </button>
           </div>
-          <div class="px-6 pb-4">${scrollHint()}</div>
         </article>
       </div>`;
     }
@@ -212,7 +241,7 @@
     if (post.type === 'ride') {
       const d = post.dateTime ? new Date(post.dateTime) : null;
       const dateStr = d ? d.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-      const ctaHtml = isAuthor ? '' : post.status !== 'open' ? '' :
+      const ctaHtml = isAuthor ? '' :
         alreadyRequested
           ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Request Sent</button>'
           : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Request to Join</button>';
@@ -227,7 +256,7 @@
             <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(post.destination || 'Ride').replace(/</g, '&lt;')}</h2>
           </div>
           <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
-            ${authorRow(author, initials, verifiedBadge, 'ride', timeAgo, true)}
+            ${authorRow(author, initials, verifiedBadge, 'ride', timeAgo, formatPostedDateTime(post.createdAt), true)}
             <div class="space-y-2 mt-1">
               ${dateStr ? '<div class="detail-row"><span>🕐</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Date & Time</div><strong>' + dateStr + '</strong></div></div>' : ''}
               ${post.seats != null ? '<div class="detail-row"><span>💺</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Seats Available</div><strong>' + post.seats + ' seats</strong></div></div>' : ''}
@@ -242,7 +271,7 @@
 
     // ── TASK ──────────────────────────────────────────────
     if (post.type === 'task') {
-      const ctaHtml = isAuthor ? '' : post.status !== 'open' ? '' :
+      const ctaHtml = isAuthor ? '' :
         alreadyRequested
           ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
           : '<button type="button" class="post-action-offer-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
@@ -257,7 +286,7 @@
             <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(cardTitle(post)).replace(/</g, '&lt;')}</h2>
           </div>
           <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
-            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'task', timeAgo, true)}</div>
+            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'task', timeAgo, formatPostedDateTime(post.createdAt), true)}</div>
             <div class="space-y-2">
               ${post.category ? '<div class="detail-row"><span>📁</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Category</div><strong>' + post.category.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
               ${post.estimatedEffort ? '<div class="detail-row"><span>⏱</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Effort</div><strong>' + post.estimatedEffort.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
@@ -288,7 +317,7 @@
             <h2 class="text-2xl font-extrabold text-neutral-900 dark:text-white leading-tight">${(post.issueDescription || post.title || 'Maintenance issue').replace(/</g, '&lt;')}</h2>
           </div>
           <div class="px-7 pt-5 pb-4 flex-1 flex flex-col gap-4">
-            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'maintenance', timeAgo, true)}</div>
+            <div class="flex items-center gap-2">${authorRow(author, initials, verifiedBadge, 'maintenance', timeAgo, formatPostedDateTime(post.createdAt), true)}</div>
             <div class="space-y-2">
               ${post.location ? '<div class="detail-row"><span>📍</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Location</div><strong>' + post.location.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
               ${post.urgency ? '<div class="detail-row"><span>⚠️</span><div><div class="text-[13px] text-neutral-400 uppercase tracking-wide font-semibold">Urgency</div><strong>' + post.urgency.replace(/</g, '&lt;') + '</strong></div></div>' : ''}
@@ -376,11 +405,16 @@
     const container = document.getElementById('view-feed');
     if (!container) return;
     const filter = (container.getAttribute('data-feed-filter') || 'post').toLowerCase();
+    const sortOrder = (container.getAttribute('data-feed-sort') || 'newest').toLowerCase();
     const searchQuery = (document.getElementById('top-search') && document.getElementById('top-search').value) || '';
     let posts = CampThread.getPosts()
       .filter((p) => filter === 'all' || p.type === filter)
-      .filter((p) => matchesSearch(p, searchQuery))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      .filter((p) => matchesSearch(p, searchQuery));
+    posts.sort((a, b) => {
+      const da = new Date(a.createdAt).getTime();
+      const db = new Date(b.createdAt).getTime();
+      return sortOrder === 'oldest' ? da - db : db - da;
+    });
     const currentUserId = CampThread.getUser()?.id;
     const countAll = CampThread.getPosts().length;
     const countRides = CampThread.getPosts().filter((p) => p.type === 'ride').length;
@@ -390,6 +424,8 @@
 
     const filterLabels = { post: 'Posts', ride: 'Rides', task: 'Tasks', maintenance: 'Maintenance', all: 'All Posts' };
     const filterLabel = filterLabels[filter] || 'Posts';
+    const sortLabels = { newest: 'Newest', oldest: 'Oldest' };
+    const sortLabel = sortLabels[sortOrder] || 'Newest';
     const filterOptions = [
       { v: 'post', l: 'Posts' },
       { v: 'ride', l: 'Rides' },
@@ -404,12 +440,24 @@
         ${filter === o.v ? '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
       </button>
     `).join('');
+    const sortOptions = [
+      { v: 'newest', l: 'Newest first' },
+      { v: 'oldest', l: 'Oldest first' }
+    ].map((o) => `
+      <button type="button" class="sort-option w-full text-left px-4 py-2.5 text-sm rounded-xl flex items-center justify-between gap-3 transition-colors
+        ${sortOrder === o.v ? 'font-semibold text-[#001489] dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'}"
+        data-sort="${o.v}">
+        <span>${o.l}</span>
+        ${sortOrder === o.v ? '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
+      </button>
+    `).join('');
 
     container.setAttribute('data-feed-filter', filter);
+    container.setAttribute('data-feed-sort', sortOrder);
     container.innerHTML = `
-      <div class="feed-header sticky top-14 z-20 bg-[#F0F2F5] dark:bg-[#18191A] flex items-center justify-between px-5 py-3 border-b border-neutral-200 dark:border-neutral-800">
-        <h2 class="text-base font-bold text-neutral-800 dark:text-white tracking-tight">Feed</h2>
-        <div class="relative" id="filter-dropdown-wrapper">
+      <div class="feed-header sticky top-0 z-20 bg-[#F0F2F5] dark:bg-[#18191A] flex items-center justify-end gap-2 px-4 py-1.5 md:px-5 border-b border-neutral-200 dark:border-neutral-800">
+        <div class="flex items-center gap-2 whitespace-nowrap">
+          <div class="relative" id="filter-dropdown-wrapper">
           <button id="filter-dropdown-btn" type="button" class="filter-pill active px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
             ${filterLabel}
             <svg class="w-4 h-4 transition-transform duration-200" id="filter-chevron" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -418,6 +466,18 @@
           </button>
           <div id="filter-dropdown-menu" class="hidden absolute right-0 top-full mt-2 bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 p-1.5 z-50 min-w-[170px]">
             ${filterOptions}
+          </div>
+          </div>
+          <div class="relative" id="sort-dropdown-wrapper">
+            <button id="sort-dropdown-btn" type="button" class="filter-pill px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+              Sort · ${sortLabel}
+              <svg class="w-4 h-4 transition-transform duration-200" id="sort-chevron" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div id="sort-dropdown-menu" class="hidden absolute left-0 top-full mt-2 bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-neutral-100 dark:border-neutral-700 p-1.5 z-50 min-w-[170px]">
+              ${sortOptions}
+            </div>
           </div>
         </div>
       </div>
@@ -435,48 +495,196 @@
       </div>
     `;
 
-    // Dropdown toggle
+    // Filter + sort dropdowns
     const dropBtn = container.querySelector('#filter-dropdown-btn');
     const dropMenu = container.querySelector('#filter-dropdown-menu');
     const chevron = container.querySelector('#filter-chevron');
-    dropBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      const isOpen = !dropMenu.classList.contains('hidden');
-      dropMenu.classList.toggle('hidden', isOpen);
-      if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
-    });
-    document.addEventListener('click', function closeDropdown(e) {
-      if (!container.querySelector('#filter-dropdown-wrapper')?.contains(e.target)) {
-        dropMenu.classList.add('hidden');
-        if (chevron) chevron.style.transform = '';
-        document.removeEventListener('click', closeDropdown);
-      }
+    const sortBtn = container.querySelector('#sort-dropdown-btn');
+    const sortMenu = container.querySelector('#sort-dropdown-menu');
+    const sortChevron = container.querySelector('#sort-chevron');
+
+    function closeFeedDropdowns() {
+      if (dropMenu) dropMenu.classList.add('hidden');
+      if (chevron) chevron.style.transform = '';
+      if (sortMenu) sortMenu.classList.add('hidden');
+      if (sortChevron) sortChevron.style.transform = '';
+    }
+
+    if (dropBtn && dropMenu) {
+      dropBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = !dropMenu.classList.contains('hidden');
+        dropMenu.classList.toggle('hidden', isOpen);
+        if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+        if (!dropMenu.classList.contains('hidden') && sortMenu) {
+          sortMenu.classList.add('hidden');
+          if (sortChevron) sortChevron.style.transform = '';
+        }
+      });
+    }
+    if (sortBtn && sortMenu) {
+      sortBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = !sortMenu.classList.contains('hidden');
+        sortMenu.classList.toggle('hidden', isOpen);
+        if (sortChevron) sortChevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+        if (!sortMenu.classList.contains('hidden') && dropMenu) {
+          dropMenu.classList.add('hidden');
+          if (chevron) chevron.style.transform = '';
+        }
+      });
+    }
+    document.addEventListener('click', function closeFeedMenus(e) {
+      const fw = container.querySelector('#filter-dropdown-wrapper');
+      const sw = container.querySelector('#sort-dropdown-wrapper');
+      if (fw?.contains(e.target) || sw?.contains(e.target)) return;
+      closeFeedDropdowns();
+      document.removeEventListener('click', closeFeedMenus);
     });
     container.querySelectorAll('.filter-option').forEach((btn) => {
       btn.addEventListener('click', function () {
         const f = this.getAttribute('data-filter');
-        dropMenu.classList.add('hidden');
+        closeFeedDropdowns();
         container.setAttribute('data-feed-filter', f);
         render();
       });
     });
-    container.querySelectorAll('.post-like-btn').forEach((btn) => {
+    container.querySelectorAll('.sort-option').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const s = this.getAttribute('data-sort');
+        closeFeedDropdowns();
+        container.setAttribute('data-feed-sort', s);
+        render();
+      });
+    });
+    container.querySelectorAll('.post-vote-up').forEach((btn) => {
       btn.addEventListener('click', function () {
         const postId = this.getAttribute('data-post-id');
-        const key = 'ut_likes_' + postId;
-        const liked = this.classList.toggle('text-blue-600');
-        let count = parseInt(localStorage.getItem(key) || '0');
-        count = liked ? count + 1 : Math.max(0, count - 1);
-        localStorage.setItem(key, count);
-        const countEl = this.querySelector('.like-count');
-        if (countEl) countEl.textContent = count > 0 ? count : 'Like';
+        const upKey = 'ut_up_' + postId;
+        const downKey = 'ut_down_' + postId;
+        const upUserKey = 'ut_upvoted_' + postId;
+        const downUserKey = 'ut_downvoted_' + postId;
+        const voteBox = this.closest('.post-vote-box');
+        const downBtn = voteBox ? voteBox.querySelector('.post-vote-down') : null;
+        const scoreEl = voteBox ? voteBox.querySelector('.vote-score') : null;
+        const upActive = !this.classList.contains('text-blue-600');
+        this.classList.toggle('text-blue-600', upActive);
+        this.classList.toggle('text-neutral-600', !upActive);
+        this.classList.toggle('dark:text-neutral-300', !upActive);
+        let upCount = parseInt(localStorage.getItem(upKey) || '0');
+        upCount = upActive ? upCount + 1 : Math.max(0, upCount - 1);
+        localStorage.setItem(upKey, upCount);
+        localStorage.setItem(upUserKey, upActive ? '1' : '0');
+        if (upActive && downBtn && downBtn.classList.contains('text-red-500')) {
+          downBtn.classList.remove('text-red-500');
+          downBtn.classList.add('text-neutral-600', 'dark:text-neutral-300');
+          let downCount = parseInt(localStorage.getItem(downKey) || '0');
+          downCount = Math.max(0, downCount - 1);
+          localStorage.setItem(downKey, downCount);
+          localStorage.setItem(downUserKey, '0');
+        }
+        if (scoreEl) {
+          const downCount = parseInt(localStorage.getItem(downKey) || '0');
+          scoreEl.textContent = String(upCount - downCount);
+        }
         if (typeof lucide !== 'undefined') lucide.createIcons();
+      });
+    });
+    container.querySelectorAll('.post-vote-down').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const postId = this.getAttribute('data-post-id');
+        const downKey = 'ut_down_' + postId;
+        const upKey = 'ut_up_' + postId;
+        const downUserKey = 'ut_downvoted_' + postId;
+        const upUserKey = 'ut_upvoted_' + postId;
+        const voteBox = this.closest('.post-vote-box');
+        const upBtn = voteBox ? voteBox.querySelector('.post-vote-up') : null;
+        const scoreEl = voteBox ? voteBox.querySelector('.vote-score') : null;
+        const downActive = !this.classList.contains('text-red-500');
+        this.classList.toggle('text-red-500', downActive);
+        this.classList.toggle('text-neutral-600', !downActive);
+        this.classList.toggle('dark:text-neutral-300', !downActive);
+        let downCount = parseInt(localStorage.getItem(downKey) || '0');
+        downCount = downActive ? downCount + 1 : Math.max(0, downCount - 1);
+        localStorage.setItem(downKey, downCount);
+        localStorage.setItem(downUserKey, downActive ? '1' : '0');
+        if (downActive && upBtn && upBtn.classList.contains('text-blue-600')) {
+          upBtn.classList.remove('text-blue-600');
+          upBtn.classList.add('text-neutral-600', 'dark:text-neutral-300');
+          let upCount = parseInt(localStorage.getItem(upKey) || '0');
+          upCount = Math.max(0, upCount - 1);
+          localStorage.setItem(upKey, upCount);
+          localStorage.setItem(upUserKey, '0');
+        }
+        if (scoreEl) {
+          const upCount = parseInt(localStorage.getItem(upKey) || '0');
+          scoreEl.textContent = String(upCount - downCount);
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      });
+    });
+    container.querySelectorAll('.post-comment-btn').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const postId = this.getAttribute('data-post-id');
+        const key = 'ut_comments_' + postId;
+        let comments = [];
+        try {
+          const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+          comments = Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          comments = [];
+        }
+        const text = window.prompt('Write your comment');
+        if (text && text.trim()) {
+          comments.push(text.trim());
+          localStorage.setItem(key, JSON.stringify(comments));
+        }
+        const countEl = this.querySelector('.comment-count');
+        if (countEl) countEl.textContent = String(comments.length);
+      });
+    });
+    container.querySelectorAll('.post-share-btn').forEach((btn) => {
+      btn.addEventListener('click', async function () {
+        const postId = this.getAttribute('data-post-id');
+        const shareUrl = window.location.origin + window.location.pathname + '#feed?post=' + encodeURIComponent(postId || '');
+        let copied = false;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(shareUrl);
+            copied = true;
+          }
+        } catch (_) {}
+        if (!copied) {
+          const ta = document.createElement('textarea');
+          ta.value = shareUrl;
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            copied = true;
+          } catch (_) {}
+          document.body.removeChild(ta);
+        }
+        const old = this.querySelector('span:last-child')?.textContent || 'Share';
+        const label = this.querySelector('span:last-child');
+        if (label) label.textContent = copied ? 'Copied!' : 'Copy link';
+        setTimeout(() => {
+          if (label) label.textContent = old === 'Copied!' || old === 'Copy link' ? 'Share' : old;
+        }, 1200);
       });
     });
     container.querySelectorAll('.post-action-request-join').forEach((btn) => {
       btn.addEventListener('click', function () {
         const postId = this.getAttribute('data-post-id');
-        CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'ride' });
+        const before = CampThread.getRequests().length;
+        const created = CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'ride' });
+        if (!created) {
+          window.alert('You cannot request your own post.');
+          return;
+        }
+        if (CampThread.getRequests().length === before) {
+          window.alert('You already requested to join this ride.');
+        }
         this.textContent = 'Requested';
         this.disabled = true;
         this.classList.add('opacity-75');
@@ -485,7 +693,15 @@
     container.querySelectorAll('.post-action-offer-help').forEach((btn) => {
       btn.addEventListener('click', function () {
         const postId = this.getAttribute('data-post-id');
-        CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'task' });
+        const before = CampThread.getRequests().length;
+        const created = CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'task' });
+        if (!created) {
+          window.alert('You cannot offer help on your own post.');
+          return;
+        }
+        if (CampThread.getRequests().length === before) {
+          window.alert('You already sent an offer for this task.');
+        }
         this.textContent = 'Offer sent';
         this.disabled = true;
         this.classList.add('opacity-75');
@@ -499,6 +715,7 @@
         const upvoted = CampThread.hasUserUpvoted(postId);
         this.classList.toggle('sent', upvoted);
         this.textContent = upvoted ? '✓ You Supported This' : '▲ Support This — ' + count + ' student' + (count !== 1 ? 's' : '') + ' already';
+        if (upvoted) window.alert('Thanks! Your support was added.');
       });
     });
 

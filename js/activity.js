@@ -132,6 +132,10 @@
         CampThread.updateRequest(reqId, { status: 'accepted' });
         if (type === 'ride') CampThread.updatePost(postId, { status: 'full' });
         if (type === 'task') CampThread.updatePost(postId, { status: 'assigned' });
+        // Once one request/offer is accepted, close other pending ones for same post
+        CampThread.getRequests()
+          .filter((r) => r.postId === postId && r.id !== reqId && r.status === 'pending')
+          .forEach((r) => CampThread.updateRequest(r.id, { status: 'declined' }));
         render();
       });
     });

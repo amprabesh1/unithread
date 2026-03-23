@@ -56,8 +56,25 @@ const UniThread = (function () {
     { id: '8', authorId: 'demo-1', type: 'ride', status: 'completed', destination: 'Walmart', dateTime: '2025-03-15T14:00', seats: 2, priceSplit: 0, createdAt: pastDate(48), title: 'Going to Walmart, can take 2 people' },
     { id: '9', authorId: 'demo-2', type: 'post', status: 'posted', title: 'Campus coffee shop reopened with new seating!', content: 'The one by the library finally has those comfy couches. Perfect for group study.', createdAt: pastDate(3) },
     { id: '10', authorId: 'demo-4', type: 'post', status: 'posted', title: 'Free pizza in the dorm lounge tonight 7pm', content: 'Leftover from an event — first come first served. Bring your own drinks!', createdAt: pastDate(6) },
-    { id: '11', authorId: 'demo-1', type: 'post', status: 'posted', title: 'Anyone else hyped for the game this weekend?', content: 'Tailgate at 2pm. Let\'s go!', createdAt: pastDate(10) }
+    { id: '11', authorId: 'demo-1', type: 'post', status: 'posted', title: 'Anyone else hyped for the game this weekend?', content: 'Tailgate at 2pm. Let\'s go!', createdAt: pastDate(10) },
+    { id: '12', authorId: 'demo-3', type: 'post', status: 'posted', title: 'I set 14 alarms for my 8:00 class and still woke up at 8:17', content: 'At this point my phone alarm and I are in a toxic relationship. It screams, I snooze, we repeat. If anyone saw a person speed-walking across campus with one shoe untied and a granola bar in hand, that was me trying to make attendance before the professor\'s dramatic door close.', createdAt: pastDate(14) },
+    { id: '13', authorId: 'demo-4', type: 'post', status: 'posted', title: 'Group project update: we have a logo, a playlist, and absolutely no slides', content: 'Our team meeting started as \"quick planning\" and somehow became 40 minutes debating whether Comic Sans is ironic enough. We now have snacks, vibes, and one person who keeps saying \"we cookin\" while not opening the document. Presentation is tomorrow, confidence is high, productivity is medium, and caffeine is carrying the whole GPA.', createdAt: pastDate(18) },
+    { id: '14', authorId: 'demo-2', type: 'post', status: 'posted', title: 'Dining hall mystery pasta defeated me, but my confidence remains undefeated', content: 'I walked in saying \"today I will eat balanced and responsible.\" Fifteen minutes later I had three garlic breads, mystery pasta, two cookies, and a lemonade that definitely has enough sugar to power a small city. If anyone sees me speed-waddling to class while pretending I am late (I am not), please mind your business and wish my stomach luck.', imageUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1400&q=80', createdAt: pastDate(22) },
+    { id: '15', authorId: 'demo-1', type: 'post', status: 'posted', title: 'Library floor 3 is not a floor, it is a survival game with Wi-Fi', content: 'I went up there to \"focus for one hour\" and somehow entered a side quest where my laptop battery hit 7%, my charger vanished, and the one outlet near me was already occupied by someone charging a laptop, a tablet, a phone, and probably a toaster. If you hear someone whispering \"just one more chapter\" at midnight, that is me bargaining with the universe.', imageUrl: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?auto=format&fit=crop&w=1400&q=80', createdAt: pastDate(28) },
+    { id: '16', authorId: 'demo-3', type: 'post', status: 'posted', title: 'My roommate said \"let’s do laundry early\" and now it is a campus documentary', content: 'We started at 8:30 with high hopes and matching hampers, and now it is 11:45 and we are in episode four of \"Why is every dryer occupied by exactly one sock and a hoodie\". We have made alliances, lost quarters, and learned that folding clothes immediately is apparently a myth. If anyone has elite laundry timing strategy, please coach us before finals week.', imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1400&q=80', createdAt: pastDate(34) }
   ];
+
+  function mergeMissingDemoPosts() {
+    const existing = new Set(posts.map((p) => String(p.id)));
+    let changed = false;
+    DEMO_POSTS.forEach((p) => {
+      if (!existing.has(String(p.id))) {
+        posts.push({ ...p });
+        changed = true;
+      }
+    });
+    if (changed) save(STORAGE_KEYS.posts, posts);
+  }
 
   function seedIfEmpty() {
     if (posts.length > 0) return;
@@ -85,6 +102,7 @@ const UniThread = (function () {
   let groupMembers = load(STORAGE_KEYS.groupMembers, []);
   let groupMessages = load(STORAGE_KEYS.groupMessages, []);
   seedIfEmpty();
+  mergeMissingDemoPosts();
   var savedTheme = load(STORAGE_KEYS.theme, 'light');
   if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
@@ -129,6 +147,16 @@ const UniThread = (function () {
     getPost(postId) { return posts.find((p) => p.id === postId) || null; },
     getRequests() { return requests; },
     addRequest(req) {
+      const uid = user?.id;
+      if (!uid) return null;
+      const post = posts.find((p) => p.id === req.postId);
+      if (!post || post.authorId === uid) return null;
+      const existing = requests.find((r) =>
+        r.postId === req.postId &&
+        r.fromUserId === uid &&
+        (r.status === 'pending' || r.status === 'accepted')
+      );
+      if (existing) return existing;
       const newReq = { id: getNextId(requests), status: 'pending', createdAt: new Date().toISOString(), ...req };
       requests.push(newReq);
       save(STORAGE_KEYS.requests, requests);

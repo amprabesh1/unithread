@@ -112,5 +112,13 @@
     var logoMobileMobile = document.getElementById('logo-home-link-mobile');
     if (logoMobile) logoMobile.addEventListener('click', logoClick);
     if (logoMobileMobile) logoMobileMobile.addEventListener('click', logoClick);
+    document.querySelectorAll('.nav-link').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var page = this.getAttribute('data-page');
+        if (!page) return;
+        e.preventDefault();
+        window.location.hash = page;
+      });
+    });
   });
 })();
