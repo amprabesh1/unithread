@@ -92,6 +92,66 @@ const UniThread = (function () {
     save(STORAGE_KEYS.upvotes, upvotes);
   }
 
+  function seedSocialDemosIfEmpty() {
+    if (!user || !user.id) return;
+    const existingUsers = load('campthread_users', []);
+    const demoPeople = [
+      { id: 'sample-physics', email: 'physics1@unithread.demo', displayName: 'Physics 1 Crew', photoUrl: null, verified: true },
+      { id: 'sample-calc', email: 'calc1@unithread.demo', displayName: 'Calc 1 Study Hub', photoUrl: null, verified: true },
+      { id: 'sample-sorority', email: 'sorority@unithread.demo', displayName: 'Delta Zeta Sisters', photoUrl: null, verified: true },
+      { id: 'sample-kai', email: 'kai@unithread.demo', displayName: 'Kai Thompson', photoUrl: null, verified: true },
+      { id: 'sample-nia', email: 'nia@unithread.demo', displayName: 'Nia Brooks', photoUrl: null, verified: true }
+    ];
+    const userMap = new Map(existingUsers.map((u) => [u.id, u]));
+    demoPeople.forEach((u) => userMap.set(u.id, { ...(userMap.get(u.id) || {}), ...u }));
+    if (!userMap.has(user.id)) userMap.set(user.id, user);
+    save('campthread_users', Array.from(userMap.values()));
+
+    if (!contacts.length) {
+      contacts = [
+        { ownerId: user.id, contactId: 'sample-kai' },
+        { ownerId: user.id, contactId: 'sample-nia' }
+      ];
+      save(STORAGE_KEYS.contacts, contacts);
+    }
+
+    if (!conversations.length) {
+      const now = new Date();
+      const conv1 = { id: 'demo-conv-1', participants: [user.id, 'sample-kai'].sort(), updatedAt: now.toISOString() };
+      const conv2 = { id: 'demo-conv-2', participants: [user.id, 'sample-nia'].sort(), updatedAt: new Date(now.getTime() - 3600 * 1000).toISOString() };
+      conversations = [conv1, conv2];
+      messages = [
+        { id: 'demo-msg-1', conversationId: 'demo-conv-1', fromUserId: 'sample-kai', text: 'Yo! Are you going to the Physics 1 review tonight?', createdAt: new Date(now.getTime() - 2 * 3600 * 1000).toISOString() },
+        { id: 'demo-msg-2', conversationId: 'demo-conv-1', fromUserId: user.id, text: 'Yeah, I will be there around 7. Save me a seat!', createdAt: new Date(now.getTime() - 90 * 60000).toISOString() },
+        { id: 'demo-msg-3', conversationId: 'demo-conv-2', fromUserId: 'sample-nia', text: 'Calc 1 quiz rumor says derivatives from trig are heavy. Want to revise after class?', createdAt: new Date(now.getTime() - 3 * 3600 * 1000).toISOString() }
+      ];
+      save(STORAGE_KEYS.conversations, conversations);
+      save(STORAGE_KEYS.messages, messages);
+    }
+
+    if (!groups.length) {
+      const now = new Date();
+      groups = [
+        { id: 'demo-group-1', name: 'Physics 1', createdBy: user.id, createdAt: new Date(now.getTime() - 6 * 3600 * 1000).toISOString() },
+        { id: 'demo-group-2', name: 'Calc 1', createdBy: user.id, createdAt: new Date(now.getTime() - 5 * 3600 * 1000).toISOString() },
+        { id: 'demo-group-3', name: 'Campus Sorority Circle', createdBy: user.id, createdAt: new Date(now.getTime() - 4 * 3600 * 1000).toISOString() }
+      ];
+      groupMembers = [
+        { groupId: 'demo-group-1', userId: user.id }, { groupId: 'demo-group-1', userId: 'sample-kai' },
+        { groupId: 'demo-group-2', userId: user.id }, { groupId: 'demo-group-2', userId: 'sample-nia' },
+        { groupId: 'demo-group-3', userId: user.id }, { groupId: 'demo-group-3', userId: 'sample-sorority' }
+      ];
+      groupMessages = [
+        { id: 'demo-gmsg-1', groupId: 'demo-group-1', fromUserId: 'sample-kai', text: 'Physics 1 mock test is in the drive folder.', createdAt: new Date(now.getTime() - 3 * 3600 * 1000).toISOString() },
+        { id: 'demo-gmsg-2', groupId: 'demo-group-2', fromUserId: 'sample-nia', text: 'Calc 1 office hours changed to Thursday 4pm.', createdAt: new Date(now.getTime() - 2 * 3600 * 1000).toISOString() },
+        { id: 'demo-gmsg-3', groupId: 'demo-group-3', fromUserId: 'sample-sorority', text: 'Sisterhood meetup Friday 6:30 PM at Student Center.', createdAt: new Date(now.getTime() - 75 * 60000).toISOString() }
+      ];
+      save(STORAGE_KEYS.groups, groups);
+      save(STORAGE_KEYS.groupMembers, groupMembers);
+      save(STORAGE_KEYS.groupMessages, groupMessages);
+    }
+  }
+
   let user = load(STORAGE_KEYS.user, null);
   let posts = load(STORAGE_KEYS.posts, []);
   let requests = load(STORAGE_KEYS.requests, []);
@@ -104,6 +164,7 @@ const UniThread = (function () {
   let groupMessages = load(STORAGE_KEYS.groupMessages, []);
   seedIfEmpty();
   mergeMissingDemoPosts();
+  seedSocialDemosIfEmpty();
   var savedTheme = load(STORAGE_KEYS.theme, 'light');
   if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
@@ -193,7 +254,10 @@ const UniThread = (function () {
       { type: 'post', status: 'posted', title: 'Confession: I opened Canvas for motivation and accidentally took a 2-hour nap', content: 'Sat down to plan my week, saw five due dates, closed laptop \"for a mental reset,\" woke up at 6:40pm with one sock on and zero progress. If anyone has a real study schedule that actually works, please share before my GPA files a missing person report.', createdAt: pastDate(6), imageUrl: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?auto=format&fit=crop&w=1400&q=80' },
       { type: 'ride', status: 'open', destination: 'Walmart + Target run', dateTime: '2026-03-27T18:00', seats: 2, priceSplit: 5, title: 'Evening grocery run', createdAt: pastDate(8) },
       { type: 'task', status: 'open', description: 'Looking for someone strong in Calculus II for a 1-hour review before quiz. I have notes and snacks.', category: 'Tutoring', estimatedEffort: '1 hour', compensation: '$20', title: 'Calc II review partner needed', createdAt: pastDate(10) },
-      { type: 'maintenance', status: 'reported', location: 'Student Center, east entrance', issueDescription: 'Water fountain bottle filler is not working. Screen is on but no water flow.', urgency: 'Medium', title: 'Water fountain not dispensing', createdAt: pastDate(14) }
+      { type: 'maintenance', status: 'reported', location: 'Student Center, east entrance', issueDescription: 'Water fountain bottle filler is not working. Screen is on but no water flow.', urgency: 'Medium', title: 'Water fountain not dispensing', createdAt: pastDate(14) },
+      { type: 'post', status: 'posted', title: 'I took a “10-minute nap” before lab and woke up in a new timezone', content: 'My alarm went off, I snoozed once, and my soul left my body. When I woke up it was dark, my roommate had eaten dinner, and I had 11 notifications that all started with “where are you??”. If attendance points had feelings, mine definitely blocked me.', createdAt: pastDate(16), imageUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1400&q=80' },
+      { type: 'post', status: 'posted', title: 'Dining hall chicken called me bro and challenged me to chew harder', content: 'I respect the protein grind, but this piece of chicken had side quests. Took me longer to finish lunch than my actual lecture. If you heard random cracking noises near table 12, that was not construction, that was me and my jaw trying to survive.', createdAt: pastDate(20), imageUrl: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1400&q=80' },
+      { type: 'post', status: 'posted', title: 'Group project status: one person designs, one person disappears, one person says “we got this”', content: 'We opened the doc at 7pm and closed it at 10pm with exactly one finished slide and a logo that looks like a startup pitch deck. Somehow morale is still high and snacks are carrying the team. If anyone has a “finish whole presentation in one night” ritual, please drop wisdom.', createdAt: pastDate(26), imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1400&q=80' }
     ];
   }
 
@@ -229,7 +293,12 @@ const UniThread = (function () {
       photoUrl: p.photo_url || null,
       verified: !!p.verified
     }));
-    if (users.length) save('campthread_users', users);
+    if (users.length) {
+      const current = load('campthread_users', []);
+      const currentMap = new Map(current.map((u) => [u.id, u]));
+      users.forEach((u) => currentMap.set(u.id, { ...(currentMap.get(u.id) || {}), ...u }));
+      save('campthread_users', Array.from(currentMap.values()));
+    }
   }
 
   async function syncFromBackend() {
@@ -258,6 +327,7 @@ const UniThread = (function () {
     setUser(u) {
       user = u;
       save(STORAGE_KEYS.user, user);
+      seedSocialDemosIfEmpty();
       return user;
     },
     logout() {

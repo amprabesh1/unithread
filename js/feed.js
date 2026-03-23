@@ -109,18 +109,15 @@
   }
 
   function primaryAction(post, currentUserId) {
-    const isAuthor = post.authorId === currentUserId;
     if (post.type === 'post') return '';
     const requests = CampThread.getRequests();
     const alreadyRequested = requests.some((r) => r.postId === post.id && r.fromUserId === currentUserId);
     if (post.type === 'ride') {
-      if (isAuthor) return '';
       if (post.status !== 'open') return '';
-      if (alreadyRequested) return '<span class="text-sm text-neutral-500">Ride request sent</span>';
-      return '<button type="button" class="post-action-request-join btn-action btn-action-ride text-neutral-700 dark:text-neutral-200 dark:border-neutral-600" data-post-id="' + post.id + '">Ask for Ride</button>';
+      if (alreadyRequested) return '<span class="text-sm text-neutral-500">Ride offer sent</span>';
+      return '<button type="button" class="post-action-request-join btn-action btn-action-ride text-neutral-700 dark:text-neutral-200 dark:border-neutral-600" data-post-id="' + post.id + '">Offer Ride</button>';
     }
     if (post.type === 'task') {
-      if (isAuthor) return '';
       if (post.status !== 'open') return '';
       if (alreadyRequested) return '<span class="text-sm text-neutral-500">Offer sent</span>';
       return '<button type="button" class="post-action-offer-help btn-action btn-action-task text-neutral-700 dark:text-neutral-200 dark:border-neutral-600" data-post-id="' + post.id + '">Offer Help</button>';
@@ -231,10 +228,9 @@
     if (post.type === 'ride') {
       const d = post.dateTime ? new Date(post.dateTime) : null;
       const dateStr = d ? d.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-      const ctaHtml = isAuthor ? '' :
-        alreadyRequested
-          ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Ride request sent</button>'
-          : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Ask for Ride</button>';
+      const ctaHtml = alreadyRequested
+        ? '<button class="btn-cta btn-cta-ride sent" disabled>✓ Ride offer sent</button>'
+        : '<button type="button" class="post-action-request-join btn-cta btn-cta-ride" data-post-id="' + post.id + '">Offer Ride</button>';
       return `<div class="snap-slide">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
           <div class="card-gradient-ride px-7 pt-8 pb-7 relative overflow-hidden">
@@ -261,10 +257,9 @@
 
     // ── TASK ──────────────────────────────────────────────
     if (post.type === 'task') {
-      const ctaHtml = isAuthor ? '' :
-        alreadyRequested
-          ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
-          : '<button type="button" class="post-action-offer-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
+      const ctaHtml = alreadyRequested
+        ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
+        : '<button type="button" class="post-action-offer-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
       return `<div class="snap-slide">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
           <div class="card-gradient-task px-7 pt-8 pb-7 relative overflow-hidden">
@@ -294,11 +289,9 @@
       const upvoteCount = CampThread.getUpvoteCount(post.id) || 0;
       const upvoted = CampThread.hasUserUpvoted(post.id);
       const requestSent = requests.some((r) => r.postId === post.id && r.fromUserId === currentUserId);
-      const offerBtn = isAuthor
-        ? ''
-        : requestSent
-          ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
-          : '<button type="button" class="post-action-maintenance-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
+      const offerBtn = requestSent
+        ? '<button class="btn-cta btn-cta-task sent" disabled>✓ Offer Sent</button>'
+        : '<button type="button" class="post-action-maintenance-help btn-cta btn-cta-task" data-post-id="' + post.id + '">Offer Help</button>';
       const supportBtn = `<button type="button" class="post-action-upvote btn-cta btn-cta-maintenance ${upvoted ? 'sent' : ''}" data-post-id="${post.id}">
         ${upvoted ? '✓ You Supported This' : '▲ Support This — ' + upvoteCount + ' student' + (upvoteCount !== 1 ? 's' : '') + ' already'}
       </button>`;
@@ -710,9 +703,9 @@
           return;
         }
         if (CampThread.getRequests().length === before) {
-          window.alert('You already sent an ask request for this ride.');
+          window.alert('You already sent a ride offer on this post.');
         }
-        this.textContent = 'Ride request sent';
+        this.textContent = 'Ride offer sent';
         this.disabled = true;
         this.classList.add('opacity-75');
       });
