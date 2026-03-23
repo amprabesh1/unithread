@@ -31,6 +31,23 @@
     }
   }
 
+  async function hydrateSupabaseSession() {
+    if (!(window.SupaClient && window.SupaClient.getSessionUser)) return;
+    const sessionUser = await window.SupaClient.getSessionUser();
+    if (!sessionUser) {
+      UniThread.setUser(null);
+      return;
+    }
+    const profile = await window.SupaClient.ensureProfile(sessionUser);
+    UniThread.setUser({
+      id: sessionUser.id,
+      email: sessionUser.email,
+      displayName: (profile && profile.display_name) || sessionUser.user_metadata?.display_name || (sessionUser.email || 'User').split('@')[0],
+      photoUrl: (profile && profile.photo_url) || null,
+      verified: !!sessionUser.email_confirmed_at
+    });
+  }
+
   function updateSidebarUser() {
     const user = UniThread.getUser();
     const nameEl = document.getElementById('sidebar-name');
@@ -49,8 +66,9 @@
     const signOut = document.getElementById('sidebar-signout');
     if (signOut) {
       signOut.href = '#';
-      signOut.onclick = function (e) {
+      signOut.onclick = async function (e) {
         e.preventDefault();
+        if (window.SupaClient && window.SupaClient.signOut) await window.SupaClient.signOut();
         UniThread.logout();
         window.dispatchEvent(new CustomEvent('campthread:auth-change'));
         window.location.hash = 'login';
@@ -75,7 +93,8 @@
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
 
-  function route() {
+  async function route() {
+    await hydrateSupabaseSession();
     var user = UniThread.getUser();
     var hash = (window.location.hash || '#feed').replace('#', '');
     if (!user) {
@@ -89,11 +108,11 @@
     showApp(page);
   }
 
-  window.addEventListener('hashchange', route);
-  window.addEventListener('campthread:auth-change', route);
-  window.addEventListener('load', function () {
+  window.addEventListener('hashchange', function () { route(); });
+  window.addEventListener('campthread:auth-change', function () { route(); });
+  window.addEventListener('load', async function () {
     initTheme();
-    route();
+    await route();
     var themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {
       themeBtn.addEventListener('click', function () {

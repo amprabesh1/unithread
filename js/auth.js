@@ -5,9 +5,6 @@
 (function () {
   const ALLOWED_DOMAINS = ['.edu'];
   const MIN_PASSWORD_LENGTH = 6;
-  const SIGNUP_PENDING_KEY = 'campthread_pending_signup';
-  const RESET_CODES_KEY = 'campthread_reset_codes';
-  const EMAILJS_CFG_KEY = 'unithread_emailjs_cfg';
 
   function isSchoolEmail(email) {
     if (!email || typeof email !== 'string') return false;
@@ -20,45 +17,6 @@
     const parts = displayName.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return (parts[0][0] || '?').toUpperCase();
-  }
-
-  function generateCode() {
-    return String(Math.floor(100000 + Math.random() * 900000));
-  }
-
-  function loadJson(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  async function sendCodeByEmail(email, code, purpose) {
-    const cfg = window.UNITHREAD_EMAILJS || loadJson(EMAILJS_CFG_KEY, null);
-    if (!cfg || !cfg.serviceId || !cfg.templateId || !cfg.publicKey) return false;
-    try {
-      const body = {
-        service_id: cfg.serviceId,
-        template_id: cfg.templateId,
-        user_id: cfg.publicKey,
-        template_params: {
-          to_email: email,
-          code,
-          purpose: purpose || 'verification',
-          app_name: 'UniThread'
-        }
-      };
-      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      return !!res.ok;
-    } catch (_) {
-      return false;
-    }
   }
 
   function renderLogin(container) {
@@ -115,12 +73,9 @@
                   </button>
                 </form>
                 <div id="forgot-password-box" class="hidden rounded-2xl border border-white/15 bg-white/[0.08] p-4 space-y-3 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
-                  <p class="text-xs text-neutral-300">Reset your password with a verification code sent to your email.</p>
+                  <p class="text-xs text-neutral-300">We will send a password reset link to your email.</p>
                   <input type="email" id="forgot-email" placeholder="you@school.edu" class="w-full px-3 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white placeholder-neutral-500" />
-                  <button type="button" id="send-reset-code" class="w-full py-2.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium">Send verification code</button>
-                  <input type="text" id="reset-code" placeholder="Enter 6-digit code" class="w-full px-3 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white placeholder-neutral-500" />
-                  <input type="password" id="reset-new-password" placeholder="New password" class="w-full px-3 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white placeholder-neutral-500" />
-                  <button type="button" id="confirm-reset-password" class="w-full py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-sm font-semibold">Reset password</button>
+                  <button type="button" id="send-reset-code" class="w-full py-2.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-sm font-medium">Send reset link</button>
                   <p id="forgot-password-msg" class="text-xs text-neutral-200 hidden"></p>
                 </div>
                 <p class="text-center text-xs text-neutral-500 pt-1">New here? Use the <span class="text-white font-medium">Sign up</span> button at the top-right.</p>
@@ -137,7 +92,6 @@
     const forgotBox = container.querySelector('#forgot-password-box');
     const forgotMsg = container.querySelector('#forgot-password-msg');
     const sendResetBtn = container.querySelector('#send-reset-code');
-    const confirmResetBtn = container.querySelector('#confirm-reset-password');
     const heroExplore = container.querySelector('#hero-explore');
     if (heroExplore) {
       heroExplore.addEventListener('click', function (e) {
@@ -168,81 +122,44 @@
       sendResetBtn.addEventListener('click', async function () {
         const email = (container.querySelector('#forgot-email')?.value || '').trim().toLowerCase();
         if (!email) return;
-        const users = loadJson('campthread_users', []);
-        const exists = users.some((u) => (u.email || '').toLowerCase() === email);
-        if (!exists) {
+        if (window.SupaClient && window.SupaClient.sendReset) {
+          const { error } = await window.SupaClient.sendReset(email);
           if (forgotMsg) {
-            forgotMsg.textContent = 'No account found with this email.';
+            forgotMsg.textContent = error ? error.message : 'Reset link sent. Check your email.';
             forgotMsg.classList.remove('hidden');
           }
           return;
         }
-        const code = generateCode();
-        const codes = loadJson(RESET_CODES_KEY, {});
-        codes[email] = { code, expiresAt: Date.now() + 10 * 60 * 1000 };
-        localStorage.setItem(RESET_CODES_KEY, JSON.stringify(codes));
-        const sent = await sendCodeByEmail(email, code, 'password_reset');
-        if (!sent) window.alert('Email provider not configured yet. Your reset code: ' + code);
         if (forgotMsg) {
-          forgotMsg.textContent = sent ? 'Code sent to your email. Enter it below.' : 'Code generated (shown in alert). Configure EmailJS to send real emails.';
+          forgotMsg.textContent = 'Supabase is not configured.';
           forgotMsg.classList.remove('hidden');
         }
       });
     }
-    if (confirmResetBtn) {
-      confirmResetBtn.addEventListener('click', function () {
-        const email = (container.querySelector('#forgot-email')?.value || '').trim().toLowerCase();
-        const code = (container.querySelector('#reset-code')?.value || '').trim();
-        const nextPassword = (container.querySelector('#reset-new-password')?.value || '');
-        const codes = loadJson(RESET_CODES_KEY, {});
-        const entry = codes[email];
-        if (!entry || entry.code !== code || Date.now() > entry.expiresAt) {
-          if (forgotMsg) {
-            forgotMsg.textContent = 'Invalid or expired code.';
-            forgotMsg.classList.remove('hidden');
-          }
-          return;
-        }
-        if (nextPassword.length < MIN_PASSWORD_LENGTH) {
-          if (forgotMsg) {
-            forgotMsg.textContent = 'Password must be at least 6 characters.';
-            forgotMsg.classList.remove('hidden');
-          }
-          return;
-        }
-        const allUsers = loadJson('campthread_users', []);
-        const i = allUsers.findIndex((u) => (u.email || '').toLowerCase() === email);
-        if (i < 0) return;
-        allUsers[i].password = nextPassword;
-        localStorage.setItem('campthread_users', JSON.stringify(allUsers));
-        delete codes[email];
-        localStorage.setItem(RESET_CODES_KEY, JSON.stringify(codes));
-        if (forgotMsg) {
-          forgotMsg.textContent = 'Password updated. You can sign in now.';
-          forgotMsg.classList.remove('hidden');
-        }
-      });
-    }
-    form.addEventListener('submit', function (e) {
+    form.addEventListener('submit', async function (e) {
       e.preventDefault();
       emailError.classList.add('hidden');
       const email = emailEl.value.trim();
       const password = container.querySelector('#login-password').value;
-      const users = [CampThread.getUser()];
-      const stored = localStorage.getItem('campthread_users');
-      const allUsers = stored ? JSON.parse(stored) : [];
-      const u = allUsers.find((x) => x.email.toLowerCase() === email.toLowerCase());
-      if (!u) {
-        emailError.textContent = 'No account found with this email.';
+      if (!(window.SupaClient && window.SupaClient.signIn)) {
+        emailError.textContent = 'Supabase is not configured.';
         emailError.classList.remove('hidden');
         return;
       }
-      if (u.password !== password) {
-        emailError.textContent = 'Incorrect password.';
+      const { data, error } = await window.SupaClient.signIn(email, password);
+      if (error || !data || !data.user) {
+        emailError.textContent = (error && error.message) || 'Unable to sign in.';
         emailError.classList.remove('hidden');
         return;
       }
-      CampThread.setUser(u);
+      const profile = await window.SupaClient.ensureProfile(data.user);
+      CampThread.setUser({
+        id: data.user.id,
+        email: data.user.email,
+        displayName: (profile && profile.display_name) || data.user.user_metadata?.display_name || (data.user.email || 'User').split('@')[0],
+        photoUrl: (profile && profile.photo_url) || null,
+        verified: !!data.user.email_confirmed_at
+      });
       window.dispatchEvent(new CustomEvent('campthread:auth-change'));
       window.location.hash = 'feed';
     });
@@ -288,15 +205,8 @@
                     minlength="${MIN_PASSWORD_LENGTH}" class="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400" />
                 </div>
                 <button type="submit" id="signup-send-code" class="w-full py-2.5 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 transition-colors">
-                  Send verification code
+                  Create account
                 </button>
-                <div id="signup-verify-box" class="hidden space-y-3">
-                  <input type="text" id="signup-verify-code" placeholder="Enter 6-digit verification code"
-                    class="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400" />
-                  <button type="button" id="signup-verify-btn" class="w-full py-2.5 rounded-lg font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
-                    Verify and create account
-                  </button>
-                </div>
               </form>
             </div>
           </div>
@@ -306,8 +216,6 @@
     const form = container.querySelector('#signup-form');
     const emailEl = container.querySelector('#signup-email');
     const emailError = container.querySelector('#signup-email-error');
-    const verifyBox = container.querySelector('#signup-verify-box');
-    const verifyBtn = container.querySelector('#signup-verify-btn');
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
       emailError.classList.add('hidden');
@@ -324,61 +232,21 @@
         emailError.classList.remove('hidden');
         return;
       }
-      const stored = localStorage.getItem('campthread_users') || '[]';
-      const allUsers = JSON.parse(stored);
-      if (allUsers.some((x) => x.email.toLowerCase() === email.toLowerCase())) {
-        emailError.textContent = 'An account with this email already exists.';
+      if (!(window.SupaClient && window.SupaClient.signUp)) {
+        emailError.textContent = 'Supabase is not configured.';
         emailError.classList.remove('hidden');
         return;
       }
-      const code = generateCode();
-      localStorage.setItem(SIGNUP_PENDING_KEY, JSON.stringify({
-        displayName,
-        email,
-        password,
-        code,
-        expiresAt: Date.now() + 10 * 60 * 1000
-      }));
-      if (verifyBox) verifyBox.classList.remove('hidden');
-      const sent = await sendCodeByEmail(email, code, 'signup_verification');
-      if (!sent) window.alert('Email provider not configured yet. Your verification code: ' + code);
-      emailError.textContent = sent
-        ? 'Verification code sent to your email. Enter it below to finish sign up.'
-        : 'Code generated (shown in alert). Configure EmailJS to send real emails.';
+      const { data, error } = await window.SupaClient.signUp(email, password, displayName);
+      if (error) {
+        emailError.textContent = error.message;
+        emailError.classList.remove('hidden');
+        return;
+      }
+      if (data && data.user) await window.SupaClient.ensureProfile(data.user, displayName);
+      emailError.textContent = 'Account created. Check your email to verify, then sign in.';
       emailError.classList.remove('hidden');
     });
-    if (verifyBtn) {
-      verifyBtn.addEventListener('click', function () {
-        const pending = loadJson(SIGNUP_PENDING_KEY, null);
-        const codeInput = (container.querySelector('#signup-verify-code')?.value || '').trim();
-        if (!pending || !pending.code || Date.now() > pending.expiresAt || codeInput !== pending.code) {
-          emailError.textContent = 'Invalid or expired verification code.';
-          emailError.classList.remove('hidden');
-          return;
-        }
-        const stored = localStorage.getItem('campthread_users') || '[]';
-        const allUsers = JSON.parse(stored);
-        if (allUsers.some((x) => x.email.toLowerCase() === pending.email.toLowerCase())) {
-          emailError.textContent = 'An account with this email already exists.';
-          emailError.classList.remove('hidden');
-          return;
-        }
-        const newUser = {
-          id: String(Date.now()),
-          email: pending.email,
-          password: pending.password,
-          displayName: pending.displayName,
-          photoUrl: null,
-          verified: true
-        };
-        allUsers.push(newUser);
-        localStorage.setItem('campthread_users', JSON.stringify(allUsers));
-        localStorage.removeItem(SIGNUP_PENDING_KEY);
-        CampThread.setUser(newUser);
-        window.dispatchEvent(new CustomEvent('campthread:auth-change'));
-        window.location.hash = 'feed';
-      });
-    }
   }
 
   function updateHeaderAvatar() {

@@ -113,6 +113,79 @@ const UniThread = (function () {
     return String(max + 1);
   }
 
+  function hasBackend() {
+    return !!(window.SupaClient && window.SupaClient.client);
+  }
+
+  function toUiPost(row) {
+    return {
+      id: row.id,
+      authorId: row.author_id,
+      type: row.type,
+      status: row.status,
+      title: row.title || '',
+      content: row.content || '',
+      imageUrl: row.image_url || null,
+      destination: row.destination || '',
+      dateTime: row.date_time || '',
+      seats: row.seats,
+      priceSplit: row.price_split,
+      description: row.description || '',
+      category: row.category || '',
+      estimatedEffort: row.estimated_effort || '',
+      compensation: row.compensation || '',
+      location: row.location || '',
+      issueDescription: row.issue_description || '',
+      urgency: row.urgency || '',
+      createdAt: row.created_at
+    };
+  }
+
+  function toUiRequest(row) {
+    return {
+      id: row.id,
+      postId: row.post_id,
+      fromUserId: row.from_user_id,
+      type: row.type,
+      status: row.status,
+      createdAt: row.created_at
+    };
+  }
+
+  async function syncProfilesForPostsAndRequests() {
+    if (!hasBackend()) return;
+    const ids = []
+      .concat(posts.map((p) => p.authorId))
+      .concat(requests.map((r) => r.fromUserId))
+      .filter(Boolean);
+    if (!ids.length) return;
+    const map = await window.SupaClient.getProfilesMapByIds(ids);
+    const users = Object.values(map).map((p) => ({
+      id: p.id,
+      email: p.email,
+      displayName: p.display_name || 'Student',
+      photoUrl: p.photo_url || null,
+      verified: !!p.verified
+    }));
+    if (users.length) save('campthread_users', users);
+  }
+
+  async function syncFromBackend() {
+    if (!hasBackend()) return;
+    const rows = await window.SupaClient.listPosts();
+    posts = rows.map(toUiPost);
+    save(STORAGE_KEYS.posts, posts);
+    const reqRows = await window.SupaClient.listRequests();
+    requests = reqRows.map(toUiRequest);
+    save(STORAGE_KEYS.requests, requests);
+    const voteRows = await window.SupaClient.listVotes();
+    upvotes = voteRows
+      .filter((v) => v.vote_type === 1)
+      .map((v) => ({ postId: v.post_id, userId: v.user_id }));
+    save(STORAGE_KEYS.upvotes, upvotes);
+    await syncProfilesForPostsAndRequests();
+  }
+
   return {
     getUser() { return user; },
     setUser(u) {
@@ -131,13 +204,33 @@ const UniThread = (function () {
       return t;
     },
     getPosts() { return posts; },
-    addPost(post) {
+    async syncFromBackend() {
+      await syncFromBackend();
+      return { posts, requests, upvotes };
+    },
+    async addPost(post) {
+      if (hasBackend() && user?.id) {
+        const created = await window.SupaClient.createPost(post, user.id);
+        const uiPost = toUiPost(created);
+        posts.unshift(uiPost);
+        save(STORAGE_KEYS.posts, posts);
+        await syncProfilesForPostsAndRequests();
+        return uiPost;
+      }
       const newPost = { id: getNextId(posts), authorId: user.id, createdAt: new Date().toISOString(), ...post };
       posts.push(newPost);
       save(STORAGE_KEYS.posts, posts);
       return newPost;
     },
-    updatePost(postId, updates) {
+    async updatePost(postId, updates) {
+      if (hasBackend()) {
+        const updated = await window.SupaClient.updatePost(postId, updates);
+        const ui = toUiPost(updated);
+        const ix = posts.findIndex((p) => p.id === postId);
+        if (ix >= 0) posts[ix] = ui;
+        save(STORAGE_KEYS.posts, posts);
+        return ui;
+      }
       const i = posts.findIndex((p) => p.id === postId);
       if (i === -1) return null;
       posts[i] = { ...posts[i], ...updates };
@@ -146,7 +239,7 @@ const UniThread = (function () {
     },
     getPost(postId) { return posts.find((p) => p.id === postId) || null; },
     getRequests() { return requests; },
-    addRequest(req) {
+    async addRequest(req) {
       const uid = user?.id;
       if (!uid) return null;
       const post = posts.find((p) => p.id === req.postId);
@@ -157,12 +250,31 @@ const UniThread = (function () {
         (r.status === 'pending' || r.status === 'accepted')
       );
       if (existing) return existing;
+      if (hasBackend()) {
+        try {
+          const created = await window.SupaClient.createRequest({ postId: req.postId, type: req.type }, uid);
+          const uiReq = toUiRequest(created);
+          requests.unshift(uiReq);
+          save(STORAGE_KEYS.requests, requests);
+          return uiReq;
+        } catch (_) {
+          return existing || null;
+        }
+      }
       const newReq = { id: getNextId(requests), status: 'pending', createdAt: new Date().toISOString(), ...req };
       requests.push(newReq);
       save(STORAGE_KEYS.requests, requests);
       return newReq;
     },
-    updateRequest(reqId, updates) {
+    async updateRequest(reqId, updates) {
+      if (hasBackend()) {
+        const updated = await window.SupaClient.updateRequest(reqId, updates);
+        const ui = toUiRequest(updated);
+        const ix = requests.findIndex((r) => r.id === reqId);
+        if (ix >= 0) requests[ix] = ui;
+        save(STORAGE_KEYS.requests, requests);
+        return ui;
+      }
       const i = requests.findIndex((r) => r.id === reqId);
       if (i === -1) return null;
       requests[i] = { ...requests[i], ...updates };
@@ -170,9 +282,16 @@ const UniThread = (function () {
       return requests[i];
     },
     getUpvotes() { return upvotes; },
-    toggleUpvote(postId) {
+    async toggleUpvote(postId) {
       const userId = user?.id;
       if (!userId) return false;
+      if (hasBackend()) {
+        const existing = await window.SupaClient.listVotes();
+        const mine = existing.find((v) => v.post_id === postId && v.user_id === userId && v.vote_type === 1);
+        await window.SupaClient.setVote(postId, userId, mine ? null : 1);
+        await syncFromBackend();
+        return true;
+      }
       const i = upvotes.findIndex((u) => u.postId === postId && u.userId === userId);
       if (i >= 0) upvotes.splice(i, 1);
       else upvotes.push({ postId, userId });

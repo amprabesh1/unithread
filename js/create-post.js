@@ -15,6 +15,10 @@
           <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">What's happening?</label>
           <textarea name="postContent" rows="4" placeholder="Share news, something funny, or whatever's on your mind..." class="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white"></textarea>
         </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Image (optional)</label>
+          <input type="file" name="postImage" accept="image/*" class="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-600 text-sm" />
+        </div>
       `;
     }
     if (type === 'ride') {
@@ -178,21 +182,25 @@
         typeFieldsEl.innerHTML = typeFields(selectedType);
       });
     });
-    container.querySelector('#create-post-form').addEventListener('submit', function (e) {
+    container.querySelector('#create-post-form').addEventListener('submit', async function (e) {
       e.preventDefault();
       const payload = collectPayload(this, selectedType);
-      const fileInput = this.querySelector('input[name="photo"]');
+      const fileInput = this.querySelector('input[name="photo"]') || this.querySelector('input[name="postImage"]');
       const file = fileInput && fileInput.files && fileInput.files[0];
-      if (selectedType === 'maintenance' && file) {
+      if (file && window.SupaClient && window.SupaClient.uploadPostImage && CampThread.getUser()) {
+        try {
+          payload.imageUrl = await window.SupaClient.uploadPostImage(file, CampThread.getUser().id);
+        } catch (_) {}
+      } else if (selectedType === 'maintenance' && file) {
         const reader = new FileReader();
-        reader.onload = function () {
+        reader.onload = async function () {
           payload.photoUrl = reader.result;
-          CampThread.addPost(payload);
+          await CampThread.addPost(payload);
           window.location.hash = 'feed';
         };
         reader.readAsDataURL(file);
       } else {
-        CampThread.addPost(payload);
+        await CampThread.addPost(payload);
         window.location.hash = 'feed';
       }
     });

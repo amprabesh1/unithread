@@ -38,9 +38,12 @@
     return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'short' });
   }
 
-  function render() {
+  async function render() {
     const container = document.getElementById('view-activity');
     if (!container) return;
+    if (CampThread.syncFromBackend) {
+      try { await CampThread.syncFromBackend(); } catch (_) {}
+    }
     const tab = (container.getAttribute('data-activity-tab') || 'posts').toLowerCase();
     const user = CampThread.getUser();
     const userId = user?.id;
@@ -125,25 +128,25 @@
     });
 
     container.querySelectorAll('.activity-accept').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const reqId = this.getAttribute('data-req-id');
         const postId = this.getAttribute('data-post-id');
         const type = this.getAttribute('data-type');
-        CampThread.updateRequest(reqId, { status: 'accepted' });
-        if (type === 'ride') CampThread.updatePost(postId, { status: 'full' });
-        if (type === 'task') CampThread.updatePost(postId, { status: 'assigned' });
+        await CampThread.updateRequest(reqId, { status: 'accepted' });
+        if (type === 'ride') await CampThread.updatePost(postId, { status: 'full' });
+        if (type === 'task') await CampThread.updatePost(postId, { status: 'assigned' });
         // Once one request/offer is accepted, close other pending ones for same post
         CampThread.getRequests()
           .filter((r) => r.postId === postId && r.id !== reqId && r.status === 'pending')
-          .forEach((r) => CampThread.updateRequest(r.id, { status: 'declined' }));
-        render();
+          .forEach(async (r) => { await CampThread.updateRequest(r.id, { status: 'declined' }); });
+        await render();
       });
     });
     container.querySelectorAll('.activity-decline').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const reqId = this.getAttribute('data-req-id');
-        CampThread.updateRequest(reqId, { status: 'declined' });
-        render();
+        await CampThread.updateRequest(reqId, { status: 'declined' });
+        await render();
       });
     });
   }

@@ -2,6 +2,7 @@
  * CampThread – Feed: empty state, filter pills with counts, rich cards, right panel
  */
 (function () {
+  let postStats = { up: {}, down: {}, mine: {}, comments: {} };
   function getStatusBadgeClass(post) {
     if (post.type === 'ride') {
       if (post.status === 'open') return 'badge-open';
@@ -183,24 +184,13 @@
 
     // ── POST (LinkedIn-style) ──────────────────────────────
     if (post.type === 'post') {
-      const upKey = 'ut_up_' + post.id;
-      const downKey = 'ut_down_' + post.id;
-      const upUserKey = 'ut_upvoted_' + post.id;
-      const downUserKey = 'ut_downvoted_' + post.id;
-      const commentKey = 'ut_comments_' + post.id;
-      const upCount = parseInt(localStorage.getItem(upKey) || '0');
-      const downCount = parseInt(localStorage.getItem(downKey) || '0');
-      const upVoted = localStorage.getItem(upUserKey) === '1';
-      const downVoted = localStorage.getItem(downUserKey) === '1';
+      const upCount = postStats.up[post.id] || 0;
+      const downCount = postStats.down[post.id] || 0;
       const voteScore = upCount - downCount;
-      const commentCount = (() => {
-        try {
-          const arr = JSON.parse(localStorage.getItem(commentKey) || '[]');
-          return Array.isArray(arr) ? arr.length : 0;
-        } catch (_) {
-          return 0;
-        }
-      })();
+      const myVote = postStats.mine[post.id] || 0;
+      const upVoted = myVote === 1;
+      const downVoted = myVote === -1;
+      const commentCount = postStats.comments[post.id] || 0;
       return `<div class="snap-slide" style="height:auto;min-height:0;">
         <article class="post-card-full bg-white dark:bg-neutral-800 flex flex-col" data-post-id="${post.id}">
           <!-- Author header -->
@@ -401,9 +391,12 @@
     return str.includes(lower);
   }
 
-  function render() {
+  async function render() {
     const container = document.getElementById('view-feed');
     if (!container) return;
+    if (CampThread.syncFromBackend) {
+      try { await CampThread.syncFromBackend(); } catch (_) {}
+    }
     const filter = (container.getAttribute('data-feed-filter') || 'post').toLowerCase();
     const sortOrder = (container.getAttribute('data-feed-sort') || 'newest').toLowerCase();
     const searchQuery = (document.getElementById('top-search') && document.getElementById('top-search').value) || '';
@@ -416,6 +409,21 @@
       return sortOrder === 'oldest' ? da - db : db - da;
     });
     const currentUserId = CampThread.getUser()?.id;
+    postStats = { up: {}, down: {}, mine: {}, comments: {} };
+    if (window.SupaClient && window.SupaClient.client) {
+      try {
+        const votes = await window.SupaClient.listVotes();
+        const comments = await window.SupaClient.listComments();
+        votes.forEach((v) => {
+          if (v.vote_type === 1) postStats.up[v.post_id] = (postStats.up[v.post_id] || 0) + 1;
+          if (v.vote_type === -1) postStats.down[v.post_id] = (postStats.down[v.post_id] || 0) + 1;
+          if (currentUserId && v.user_id === currentUserId) postStats.mine[v.post_id] = v.vote_type;
+        });
+        comments.forEach((c) => {
+          postStats.comments[c.post_id] = (postStats.comments[c.post_id] || 0) + 1;
+        });
+      } catch (_) {}
+    }
     const countAll = CampThread.getPosts().length;
     const countRides = CampThread.getPosts().filter((p) => p.type === 'ride').length;
     const countTasks = CampThread.getPosts().filter((p) => p.type === 'task').length;
@@ -558,8 +566,15 @@
       });
     });
     container.querySelectorAll('.post-vote-up').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const postId = this.getAttribute('data-post-id');
+        if (window.SupaClient && window.SupaClient.client && currentUserId) {
+          const current = postStats.mine[postId] || 0;
+          const next = current === 1 ? null : 1;
+          await window.SupaClient.setVote(postId, currentUserId, next);
+          await render();
+          return;
+        }
         const upKey = 'ut_up_' + postId;
         const downKey = 'ut_down_' + postId;
         const upUserKey = 'ut_upvoted_' + postId;
@@ -591,8 +606,15 @@
       });
     });
     container.querySelectorAll('.post-vote-down').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const postId = this.getAttribute('data-post-id');
+        if (window.SupaClient && window.SupaClient.client && currentUserId) {
+          const current = postStats.mine[postId] || 0;
+          const next = current === -1 ? null : -1;
+          await window.SupaClient.setVote(postId, currentUserId, next);
+          await render();
+          return;
+        }
         const downKey = 'ut_down_' + postId;
         const upKey = 'ut_up_' + postId;
         const downUserKey = 'ut_downvoted_' + postId;
@@ -624,21 +646,20 @@
       });
     });
     container.querySelectorAll('.post-comment-btn').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const postId = this.getAttribute('data-post-id');
+        const text = window.prompt('Write your comment');
+        if (!text || !text.trim()) return;
+        if (window.SupaClient && window.SupaClient.client && currentUserId) {
+          await window.SupaClient.addComment(postId, currentUserId, text.trim());
+          await render();
+          return;
+        }
         const key = 'ut_comments_' + postId;
         let comments = [];
-        try {
-          const parsed = JSON.parse(localStorage.getItem(key) || '[]');
-          comments = Array.isArray(parsed) ? parsed : [];
-        } catch (_) {
-          comments = [];
-        }
-        const text = window.prompt('Write your comment');
-        if (text && text.trim()) {
-          comments.push(text.trim());
-          localStorage.setItem(key, JSON.stringify(comments));
-        }
+        try { comments = JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (_) {}
+        comments.push(text.trim());
+        localStorage.setItem(key, JSON.stringify(comments));
         const countEl = this.querySelector('.comment-count');
         if (countEl) countEl.textContent = String(comments.length);
       });
@@ -674,10 +695,10 @@
       });
     });
     container.querySelectorAll('.post-action-request-join').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const postId = this.getAttribute('data-post-id');
         const before = CampThread.getRequests().length;
-        const created = CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'ride' });
+        const created = await CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'ride' });
         if (!created) {
           window.alert('You cannot request your own post.');
           return;
@@ -691,10 +712,10 @@
       });
     });
     container.querySelectorAll('.post-action-offer-help').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const postId = this.getAttribute('data-post-id');
         const before = CampThread.getRequests().length;
-        const created = CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'task' });
+        const created = await CampThread.addRequest({ postId, fromUserId: currentUserId, type: 'task' });
         if (!created) {
           window.alert('You cannot offer help on your own post.');
           return;
@@ -708,9 +729,9 @@
       });
     });
     container.querySelectorAll('.post-action-upvote').forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', async function () {
         const postId = this.getAttribute('data-post-id');
-        CampThread.toggleUpvote(postId);
+        await CampThread.toggleUpvote(postId);
         const count = CampThread.getUpvoteCount(postId);
         const upvoted = CampThread.hasUserUpvoted(postId);
         this.classList.toggle('sent', upvoted);
